@@ -26,7 +26,7 @@ ROTEIRO = os.path.join(construir.PASTA_BUILD, "console_teste.lua")
 # (descricao, argumentos, medir instrucoes com funcoes nativas)
 CENARIOS = [
     ("titulo, menu e corrida de 3 (comandos simulados)", "menu", False),
-    ("tela de teste (R no titulo), paginas 1 e 2", "teste", False),
+    ("tela de teste (menu), paginas 1, 2 e 3", "teste", False),
     ("1 jogador, Por do Sol, 2 voltas", "corrida 1 3 2", False),
     ("2 jogadores, Orla", "corrida 2 1 1", False),
     ("3 jogadores, Crepusculo", "corrida 3 4 1", False),
@@ -114,14 +114,17 @@ package.preload["sprites"] = function()
 end
 
 local max_quadros
+local segurar = {}   -- { botao, do quadro, ate o quadro }
 if cenario == "menu" then
   local roteiro = { [40] = BTN_Z, [60] = RIGHT, [70] = RIGHT, [80] = DOWN, [90] = RIGHT, [100] = DOWN,
                     [110] = LEFT, [120] = LEFT, [130] = DOWN, [140] = BTN_Z }
   for q, b in pairs(roteiro) do apertos[q] = { [b] = true } end
   max_quadros = 1500
 elseif cenario == "teste" then
-  for q, b in pairs({ [30] = BTN_G, [60] = BTN_Z, [120] = BTN_X }) do apertos[q] = { [b] = true } end
-  max_quadros = 180
+  -- titulo -> menu -> sobe ate TESTE DE TELA -> segura direita (paginas 2 e 3) -> segura esquerda (volta)
+  for q, b in pairs({ [30] = BTN_Z, [50] = UP, [70] = BTN_Z }) do apertos[q] = { [b] = true } end
+  segurar = { { RIGHT, 100, 170 }, { RIGHT, 200, 270 }, { LEFT, 300, 370 }, { LEFT, 400, 470 }, { LEFT, 500, 570 } }
+  max_quadros = 620
 else
   local n, pista, voltas = tonumber(arg[2]) or 3, tonumber(arg[3]) or 5, tonumber(arg[4]) or 1
   package.preload["dev_config"] = function()
@@ -139,6 +142,10 @@ local fim_em
 while quadro < max_quadros do
   quadro = quadro + 1
   if cenario == "menu" and quadro > 150 then segurados[BTN_Z] = true end
+  for _, s in ipairs(segurar) do segurados[s[1]] = nil end
+  for _, s in ipairs(segurar) do
+    if quadro >= s[2] and quadro <= s[3] then segurados[s[1]] = true end
+  end
   centenas = 0
   debug.sethook(gancho, "", 100)
   local ok, erro = xpcall(update, debug.traceback, quadro)

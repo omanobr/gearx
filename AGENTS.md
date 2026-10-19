@@ -100,6 +100,7 @@ Custo de cada comando na drawlist:
 - No console, as imagens de `Sprites` **não têm `width`/`height`** (a v0.3 quebrou lendo `.width`): só sirva-as ao `ui.spr`. Os tamanhos dos carros vêm de `Arte.carros.tamanho` (`dados_arte.lua`). Os jogos oficiais usam `Sprites.find("nome")`, que o console tem e o simulador não.
 - No console, as bordas de `ui.rectfill`/`ui.trisfill` não batem com as do simulador (o simulador trata `x1`/`y1` do `rectfill` como exclusivos): emendas exatas entre formas deixam frestas (o triângulo parece deixar de fora a linha de cima e a de baixo). Sobreponha (1 linha em cima, 2 embaixo) e desenhe de trás para frente.
 - O console desenha errado coordenadas com casas decimais (o simulador só trunca). Passe sempre inteiros (`x // 1`).
+- `ui.trisfill` no console não preenche como no simulador (a pista de triângulos saía com linhas verdes e escadinha). Para áreas grandes, prefira `ui.rectfill` em faixas horizontais.
 - Botões por posição num controle estilo SNES: `BTN_Z` = baixo (B), `BTN_X` = direita (A), `BTN_Q` = cima (X), `BTN_E` = esquerda (Y), `BTN_F` = L, `BTN_G` = R.
 - Coordenadas gigantes (objetos atrás da câmera) travaram o console: mantenha tudo em ±32767 e pule o que está fora da tela.
 - `update(frame)`: `frame` chega como número decimal (`63.0`). Use contadores próprios.

@@ -62,56 +62,51 @@ local function nivel(largura)
 end
 R.nivel = nivel
 
-local function quad(x1, y1, x2, y2, x3, y3, x4, y4, cor)
-  x1, y1, x2, y2, x3, y3, x4, y4 = x1 // 1, y1 // 1, x2 // 1, y2 // 1, x3 // 1, y3 // 1, x4 // 1, y4 // 1
-  ui.trisfill(x1, y1, x2, y2, x3, y3, cor)
-  ui.trisfill(x1, y1, x3, y3, x4, y4, cor)
-end
-
 local XADREZ = { 0xCC, 0xCC, 0x33, 0x33, 0xCC, 0xCC, 0x33, 0x33 }
+-- medidas da estrada em fracoes da meia-largura do asfalto (w)
+local ZEBRA_LARG = 7 / 6                  -- a zebra vai 1/6 alem do asfalto de cada lado
+local FAIXA_LARG = 1 / 60                 -- meia-largura de cada faixa branca
+local FAIXA_POS = 1 - 2 / C.FAIXAS        -- distancia do centro ate cada faixa (3 pistas: 1/3)
+assert(C.FAIXAS == 3, "segmento desenha 2 faixas brancas (3 pistas)")
 
--- Um trapezio da estrada: grama, zebra, asfalto e faixas. Os trapezios viram dois
--- triangulos direto aqui (sem chamar quad): este e o trecho mais repetido do quadro.
--- TODAS as coordenadas vao arredondadas (// 1): o console desenha errado numeros com casas
--- decimais (a pista saia verde, em escadinha), e os jogos da equipe do Lupi fazem o mesmo.
-local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice)
-  local tri = ui.trisfill
+-- Um trapezio da estrada (grama, zebra, asfalto e faixas) desenhado em FAIXAS HORIZONTAIS
+-- (ui.rectfill), linha a linha, como o Top Gear: no console o triangulo (ui.trisfill) nao
+-- preenche certo (a pista saia com linhas verdes e em escadinha); o retangulo sim.
+-- y2 = linha de cima, y1 = linha de baixo; passo = altura de cada faixa (2 nas telas
+-- divididas, para gastar menos). Coordenadas sempre inteiras (// 1), como no console.
+-- O "+ 1" no fim de cada faixa e porque no simulador o rectfill nao inclui a ultima coluna/linha.
+local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice, passo)
+  local rect = ui.rectfill
   local k = claro and 1 or 2
-  local r1, r2 = w1 / 6, w2 / 6
-  ui.rectfill(0, y2, W, y1 + 1, cores.grama[k])
+  rect(0, y2, W, y1 + 1, cores.grama[k])
   if cores.direita then
-    ui.rectfill(min(x1 + w1 + r1, x2 + w2 + r2) // 1, y2, W, y1 + 1, cores.direita[k])
+    rect(min(x1 + w1 * 7 / 6, x2 + w2 * 7 / 6) // 1, y2, W, y1 + 1, cores.direita[k])
   end
-  local a, b = (x1 - w1 - r1) // 1, (x1 + w1 + r1) // 1
-  local c, d, cor = (x2 + w2 + r2) // 1, (x2 - w2 - r2) // 1, cores.zebra[k]
-  tri(a, y1, b, y1, c, y2, cor)
-  tri(a, y1, c, y2, d, y2, cor)
-  if indice <= 2 then
-    -- linha de largada/chegada quadriculada
-    quad(x1 - w1, y1, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2, Cores.branco)
-    ui.fillp(table.unpack(XADREZ))
-    quad(x1 - w1, y1, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2, Cores.preto)
-    ui.fillp()
-    return
-  end
-  a, b, c, d, cor = (x1 - w1) // 1, (x1 + w1) // 1, (x2 + w2) // 1, (x2 - w2) // 1, cores.asfalto[k]
-  tri(a, y1, b, y1, c, y2, cor)
-  tri(a, y1, c, y2, d, y2, cor)
-  if claro then
-    local l1, l2 = w1 / 60, w2 / 60
-    local lw1, lw2 = w1 * 2 / C.FAIXAS, w2 * 2 / C.FAIXAS
-    local lx1, lx2 = x1 - w1 + lw1, x2 - w2 + lw2
-    cor = cores.faixa
-    for _ = 1, C.FAIXAS - 1 do
-      if l1 < 0.8 then
-        ui.line(lx1 // 1, y1, lx2 // 1, y2, cor)   -- faixa fininha (longe): uma linha basta
-      else
-        a, b, c, d = (lx1 - l1) // 1, (lx1 + l1) // 1, (lx2 + l2) // 1, (lx2 - l2) // 1
-        tri(a, y1, b, y1, c, y2, cor)
-        tri(a, y1, c, y2, d, y2, cor)
+  local zebra, asfalto, faixa = cores.zebra[k], cores.asfalto[k], cores.faixa
+  local largada = indice <= 2
+  local passos = (y1 - y2) / passo
+  if passos < 1 then passos = 1 end
+  local dx, dw = (x1 - x2) / passos, (w1 - w2) / passos
+  local x, w = x2, w2
+  for y = y2, y1, passo do
+    local fim = y + passo
+    local r = w * ZEBRA_LARG
+    rect((x - r) // 1, y, (x + r) // 1 + 1, fim, zebra)
+    local a, b = (x - w) // 1, (x + w) // 1 + 1
+    if largada then                         -- linha de largada/chegada quadriculada
+      rect(a, y, b, fim, Cores.branco)
+      ui.fillp(table.unpack(XADREZ))
+      rect(a, y, b, fim, Cores.preto)
+      ui.fillp()
+    else
+      rect(a, y, b, fim, asfalto)
+      if claro then                         -- as 2 faixas brancas (3 pistas)
+        local l, m = w * FAIXA_LARG, w * FAIXA_POS
+        rect((x - m - l) // 1, y, (x - m + l) // 1 + 1, fim, faixa)
+        rect((x + m - l) // 1, y, (x + m + l) // 1 + 1, fim, faixa)
       end
-      lx1, lx2 = lx1 + lw1, lx2 + lw2
     end
+    x, w = x + dx, w + dw
   end
 end
 
@@ -261,12 +256,11 @@ function R.visao(corrida, carro, v, quadro)
   end
   -- faixa entre o panorama e o ponto mais distante da estrada (mar/horizonte)
   if maxy > fim_fundo then ui.rectfill(0, fim_fundo, W, maxy, f.cor_mar) end
-  -- Os trapezios sao desenhados de LONGE para PERTO, cada um com 1 linha a mais em cima e
-  -- 2 embaixo: o de perto, desenhado depois, cobre a sobra. O triangulo do console deixa de
-  -- fora a linha de cima e a de baixo (apareciam linhas verdes da grama entre os blocos,
-  -- maiores ao longe, onde cada bloco tem poucas linhas); com a sobra nao fica fresta.
+  -- Os trapezios sao desenhados de LONGE para PERTO: se o retangulo do console pintar uma
+  -- linha a mais embaixo (no simulador a ultima linha nao entra), o de perto cobre a sobra.
+  local passo = H < C.ALTURA and 2 or 1   -- telas divididas: faixas de 2 linhas (mais leve)
   for t = nt, 1, -1 do
-    segmento(W, cores, TCLARO[t], TX1[t], TY1[t] + 2, TW1[t], TX2[t], TY2[t] - 1, TW2[t], TIDX[t])
+    segmento(W, cores, TCLARO[t], TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t], passo)
   end
 
   -- 2) quais carros estao na frente desta camera

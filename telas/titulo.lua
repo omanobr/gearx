@@ -15,8 +15,7 @@ end
 function Tela:atualizar()
   self.t = self.t + 1
   Demo.atualizar()
-  if self.t > 20 and Entrada.confirmar() then Jogo.ir("menu")
-  elseif self.t > 20 and Entrada.teste() then Jogo.ir("teste") end
+  if self.t > 20 and Entrada.confirmar() then Jogo.ir("menu") end
 end
 
 function Tela:desenhar()
@@ -28,8 +27,7 @@ function Tela:desenhar()
   if (self.t // 30) % 2 == 0 then
     T.grande_centro("APERTE " .. Entrada.NOME.confirmar, 240, 176, 3, Cores.branco, Cores.preto)
   end
-  T.p("v0.7", 6, 258, Cores.cinza, Cores.preto)
-  T.p_direita(Entrada.NOME.teste .. ": TESTE DE TELA", 474, 258, Cores.cinza, Cores.preto)
+  T.p("v0.8", 6, 258, Cores.cinza, Cores.preto)
 end
 
 return Tela

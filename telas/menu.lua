@@ -8,7 +8,8 @@ local Demo = require "demo"
 local Tela = {}
 Tela.__index = Tela
 
-local LINHAS = { "jogadores", "pista", "voltas", "correr" }
+-- "teste" (tela de teste, temporaria) fica depois de CORRER: so se chega nela descendo
+local LINHAS = { "jogadores", "pista", "voltas", "correr", "teste" }
 local MEIO_TOM = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }
 
 function Tela.nova()
@@ -35,7 +36,9 @@ function Tela:atualizar()
   Demo.iniciar(op.pista)   -- a demonstracao do fundo acompanha a pista escolhida
   Demo.atualizar()
   if Entrada.confirmar() then
-    if linha == "correr" then
+    if linha == "teste" then
+      Jogo.ir("teste")
+    elseif linha == "correr" then
       Jogo.ir("corrida", {
         jogadores = op.jogadores, pista = op.pista, voltas = op.voltas,
         autopiloto = DEV.autopiloto,
@@ -82,7 +85,9 @@ function Tela:desenhar()
     if linha == "correr" then y = y + 70 end
     local ativo = i == self.sel
     local cor = ativo and Cores.amarelo or Cores.branco
-    if linha == "correr" then
+    if linha == "teste" then
+      T.p((ativo and "> " or "") .. "TESTE DE TELA", 40, 216, ativo and Cores.amarelo or Cores.cinza)
+    elseif linha == "correr" then
       if ativo and (self.t // 15) % 2 == 0 then cor = Cores.branco end
       T.grande_centro(nomes[linha], 240, y, 3, cor, Cores.preto)
     else
