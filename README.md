@@ -71,7 +71,7 @@ gearx/
 - O jogo é escrito em **Lua**. O console chama a função `update()` **60 vezes por segundo**; nela você lê os controles e desenha tudo de novo.
 - Cores: o jogo inteiro tem **uma paleta de no máximo 256 cores**. Todas as imagens e o código dividem essas cores. Por isso a ferramenta `preparar_arte.py` reduz as cores das suas imagens.
 - Imagens: no máximo **512 x 512** pixels cada.
-- **Memória gráfica:** cada pixel de imagem ocupa 1 byte, e a soma de todas as imagens tem limite (cerca de 768 KB, valor estimado a partir do log do servidor). A construção mostra quanto o jogo usa ("Memória gráfica: 564 KB de ~768 KB") e dá erro se passar. Por isso o título não tem mais uma imagem de tela inteira (130 KB): ele mostra uma corrida de demonstração.
+- **Limites do aparelho:** cada imagem pode ter no máximo **46 mil pixels** (largura x altura; 1 byte por pixel). A construção avisa se alguma passar, e as panorâmicas são cortadas em pedaços que cabem. Por isso o título não tem mais uma imagem de tela inteira (130 mil pixels): ele mostra uma corrida de demonstração. A lista oficial de limites (imagens por quadro, instruções Lua por quadro, lista de desenho) está na [issue #12 do Lupinho](https://github.com/lupi-org-br/lupinho/issues/12).
 - Documentação oficial: <https://lupi.api.br/docs/>. Os jogos de exemplo da equipe estão em <https://github.com/lupi-org-br>.
 
 ---
@@ -92,7 +92,7 @@ Para uma pista nova, copie um bloco `{ nome = ..., fundo = ..., trechos = {...},
 
 **Mudar uma cor:** em `cores.lua` ou nas `cores` de cada pista. Escreva a cor em hexadecimal, como no Photoshop/GIMP, dentro de `hex(0xRRGGBB)`. A construção coloca a cor nova na paleta sozinha (pela amostra `img/cores.png`).
 
-**Trocar ou adicionar arte:** coloque a imagem em `arte-original/`, ajuste a lista no começo de `ferramentas/preparar_arte.py` (por exemplo, `FUNDOS`) e dê dois cliques em `PREPARAR_ARTE.bat`. Confira o resultado em `build/previa_arte.png`. Por padrão (`MANTER_CORES = True`) a arte nova reaproveita as cores já publicadas, para a paleta do servidor não crescer. A altura das panorâmicas (`ALTURA_FUNDO`, hoje 110) é o que mais pesa na memória gráfica.
+**Trocar ou adicionar arte:** coloque a imagem em `arte-original/`, ajuste a lista no começo de `ferramentas/preparar_arte.py` (por exemplo, `FUNDOS`) e dê dois cliques em `PREPARAR_ARTE.bat`. Confira o resultado em `build/previa_arte.png`. Por padrão (`MANTER_CORES = True`) a arte nova reaproveita as cores já publicadas, para a paleta do servidor não crescer. A altura das panorâmicas (`ALTURA_FUNDO`, hoje 110) define em quantos pedaços cada uma é cortada.
 
 **O fundo nas curvas:** a panorâmica começa centralizada e desliza para o lado nas curvas, até a borda da imagem. Nas retas ela volta devagar ao centro. A velocidade disso fica em `C.FUNDO_VEL` e `C.FUNDO_VOLTA` (`config.lua`).
 

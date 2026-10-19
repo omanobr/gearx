@@ -69,6 +69,30 @@
 
 ---
 
+## Limites do hardware real (issue oficial lupi-org-br/lupinho#12, set/2026)
+
+O simulador ainda NÃO aplica estes limites (PR #24 começou só pela paleta). No aparelho:
+- **Sprite bank de 46 KB**: cada imagem com no máximo ~46 mil pixels (a esteira recusa acima de 46059 bytes).
+- **SD**: no máximo **150 KB** de imagens lidas por quadro e **32** cargas de sprite por quadro.
+- **Lua**: ~**50-60 mil instruções da VM por quadro** (3,6 M/s, perto do Pico-8). Um watchdog fecha o jogo se o loop travar muitos quadros.
+- **Drawlist**: no máximo **18 KB** de comandos por quadro; comandos além disso são ignorados.
+- **Cores**: 255 + transparente (índices acima de 255 são recusados).
+
+Custo de cada comando na drawlist:
+
+| Comando | Bytes |
+|---|---|
+| `ui.line`, `ui.rect`, `ui.rectfill`, `ui.circ`, `ui.circfill` | 12 |
+| `ui.trisfill` | 20 |
+| `ui.spr` / `ui.tile` (primeiro do lote / lote contínuo) | 8 / 4 |
+| `ui.clip` (definir / resetar) | 12 / 4 |
+| `ui.fillp` (definir / resetar) | 12 / 4 |
+| `ui.cls` | 16 |
+| `ui.camera`, `ui.palset` | 0 |
+| `ui.print` | 16 + texto arredondado para múltiplo de 4 |
+
+---
+
 ## Diferenças encontradas no simulador Lupinho (lupi-org-br/lupinho, out/2026)
 
 - Lua 5.5 no simulador; o console usa **Lua 5.4**. Escreva código compatível com 5.4.

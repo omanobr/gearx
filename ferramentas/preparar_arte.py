@@ -6,15 +6,16 @@ imagens pequenas, com poucas cores, no formato que o Lupi aceita.
 
 O que ele faz:
   - FUNDOS: recorta cada panoramica numa faixa larga (ceu + montanhas + cidade + mar)
-    e divide em pedacos de no maximo 512 px de largura (limite do Lupi).
+    e divide em pedacos que caibam no limite do Lupi (ate 512 px de largura e ate
+    LIMITE_BYTES_IMAGEM bytes = largura x altura por imagem).
   - CARROS: recorta os 3 carros (reto, virando para a esquerda e para a direita),
     pinta em varias cores e gera varios tamanhos (para o carro "diminuir" ao longe).
   - PALETA: todas as imagens do jogo dividem uma paleta de no maximo 256 cores.
     O script escolhe as melhores cores para caber nesse limite (ou reaproveita as
     cores ja publicadas: veja MANTER_CORES).
-  - MEMORIA: cada pixel ocupa 1 byte da memoria grafica do console, que e limitada
-    (veja LIMITE_MEMORIA_GRAFICA em construir.py). Por isso nao ha mais imagem de
-    tela de titulo: o titulo mostra uma corrida de demonstracao.
+  - MEMORIA: cada pixel ocupa 1 byte da memoria grafica do console, e cada imagem
+    tem no maximo LIMITE_BYTES_IMAGEM bytes (veja construir.py). Por isso nao ha mais
+    imagem de tela de titulo: o titulo mostra uma corrida de demonstracao.
 
 Rode de novo sempre que mudar algo em arte-original/ ou nas configuracoes abaixo:
     python ferramentas/preparar_arte.py
@@ -30,6 +31,9 @@ try:
 except ImportError:
     print("ERRO: falta a biblioteca Pillow. Instale com:  python -m pip install pillow")
     sys.exit(1)
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from construir import LIMITE_BYTES_IMAGEM  # noqa: E402
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ORIGEM = os.path.join(RAIZ, "arte-original")
@@ -51,8 +55,8 @@ CORES_CARROS = 92
 # Desligue (False) so se for trocar a arte por outra bem diferente.
 MANTER_CORES = True
 
-# Altura da faixa de fundo no jogo (em pixels da tela do Lupi). Cada panoramica ocupa
-# cerca de largura x altura bytes de memoria grafica: 125 deixava as 5 com 536 KB.
+# Altura da faixa de fundo no jogo (em pixels da tela do Lupi). Cada panoramica e
+# cortada em pedacos de no maximo LIMITE_BYTES_IMAGEM bytes: mais alta = mais pedacos.
 ALTURA_FUNDO = 110
 
 # Fundos: nome usado no codigo, arquivo, e recorte (x0, y0, x1, y1) na imagem original.
@@ -349,7 +353,7 @@ def main():
         img = aplicar_paleta(img, paleta_fundos)
         cores_img = list({p[:3] for p in pixels_de(img)})
         largura = img.size[0]
-        n_pecas = -(-largura // 512)
+        n_pecas = -(-largura // min(512, LIMITE_BYTES_IMAGEM // ALTURA_FUNDO))
         pecas, larguras = [], []
         x = 0
         for i in range(n_pecas):

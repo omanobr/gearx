@@ -26,7 +26,9 @@ Referência da API do Lupi e diferenças do simulador: @AGENTS.md
 ## Regras
 
 - **Cores**: sempre `Palette.hex(0xRRGGBB)` (alias local `hex`) com o literal de 6 dígitos dentro de `hex(...)`. O `construir.py` procura esses literais para montar `img/cores.png`, e é assim que a cor entra na paleta oficial. Nunca use índices fixos: a ordem da paleta muda a cada build e no servidor oficial.
-- **Memória gráfica**: a soma de todas as imagens (1 byte por pixel) tem limite no console. O servidor recusou 882 KB ("Capacity check failed ... limite de 46059 bytes da memória gráfica" na última imagem); estimativa ~768 KB em `LIMITE_MEMORIA_GRAFICA` (`construir.py`, falha acima). Hoje: 564 KB (panorâmicas 415 KB com `ALTURA_FUNDO = 110`, carros 163 KB). Nada de imagens de tela inteira; reaproveite o que já existe.
+- **Limites do aparelho** (fonte oficial: https://github.com/lupi-org-br/lupinho/issues/12, resumo em AGENTS.md):
+  - cada imagem linear até **46059 bytes** (largura x altura): a esteira online recusa a build acima disso (`LIMITE_BYTES_IMAGEM` em `construir.py`, que também falha). Panorâmicas são cortadas em pedaços de até `46059 // ALTURA_FUNDO` px. Nada de imagens de tela inteira.
+  - por quadro: até **150 KB** de imagens lidas do SD, até **32** cargas de sprite, drawlist até **18 KB** (comandos além disso são ignorados) e **~50-60 mil instruções Lua** (watchdog fecha o jogo se travar). Ainda não medidos no GearX.
 - Paleta total hoje: ~229 de 256 (arte ~176). `preparar_arte.py` usa `MANTER_CORES = True`: a arte regenerada só usa cores que já estão em `img/`, porque a paleta do servidor só acumula. Se estourar, baixe `CORES_FUNDOS`/`CORES_CARROS` em `preparar_arte.py` ou reaproveite cores.
 - Lua 5.4: sem recursos exclusivos do 5.5. Nada de alocar tabelas por quadro no caminho quente (`render.lua` usa buffers pré-alocados). O console é um ESP32-S3 a 240 MHz e o desempenho real ainda não foi medido. `C.DISTANCIA` controla o custo.
 - Texto pequeno (`ui.print`) é só ASCII: use `T.p*`, que remove acentos. A fonte grande `T.grande*` aceita acentos e º.
