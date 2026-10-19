@@ -63,6 +63,7 @@ end
 R.nivel = nivel
 
 local function quad(x1, y1, x2, y2, x3, y3, x4, y4, cor)
+  x1, y1, x2, y2, x3, y3, x4, y4 = x1 // 1, y1 // 1, x2 // 1, y2 // 1, x3 // 1, y3 // 1, x4 // 1, y4 // 1
   ui.trisfill(x1, y1, x2, y2, x3, y3, cor)
   ui.trisfill(x1, y1, x3, y3, x4, y4, cor)
 end
@@ -71,15 +72,18 @@ local XADREZ = { 0xCC, 0xCC, 0x33, 0x33, 0xCC, 0xCC, 0x33, 0x33 }
 
 -- Um trapezio da estrada: grama, zebra, asfalto e faixas. Os trapezios viram dois
 -- triangulos direto aqui (sem chamar quad): este e o trecho mais repetido do quadro.
+-- TODAS as coordenadas vao arredondadas (// 1): o console desenha errado numeros com casas
+-- decimais (a pista saia verde, em escadinha), e os jogos da equipe do Lupi fazem o mesmo.
 local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice)
   local tri = ui.trisfill
   local k = claro and 1 or 2
   local r1, r2 = w1 / 6, w2 / 6
   ui.rectfill(0, y2, W, y1 + 1, cores.grama[k])
   if cores.direita then
-    ui.rectfill(floor(min(x1 + w1 + r1, x2 + w2 + r2)), y2, W, y1 + 1, cores.direita[k])
+    ui.rectfill(min(x1 + w1 + r1, x2 + w2 + r2) // 1, y2, W, y1 + 1, cores.direita[k])
   end
-  local a, b, c, d, cor = x1 - w1 - r1, x1 + w1 + r1, x2 + w2 + r2, x2 - w2 - r2, cores.zebra[k]
+  local a, b = (x1 - w1 - r1) // 1, (x1 + w1 + r1) // 1
+  local c, d, cor = (x2 + w2 + r2) // 1, (x2 - w2 - r2) // 1, cores.zebra[k]
   tri(a, y1, b, y1, c, y2, cor)
   tri(a, y1, c, y2, d, y2, cor)
   if indice <= 2 then
@@ -90,7 +94,7 @@ local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice)
     ui.fillp()
     return
   end
-  a, b, c, d, cor = x1 - w1, x1 + w1, x2 + w2, x2 - w2, cores.asfalto[k]
+  a, b, c, d, cor = (x1 - w1) // 1, (x1 + w1) // 1, (x2 + w2) // 1, (x2 - w2) // 1, cores.asfalto[k]
   tri(a, y1, b, y1, c, y2, cor)
   tri(a, y1, c, y2, d, y2, cor)
   if claro then
@@ -100,10 +104,11 @@ local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice)
     cor = cores.faixa
     for _ = 1, C.FAIXAS - 1 do
       if l1 < 0.8 then
-        ui.line(floor(lx1), y1, floor(lx2), y2, cor)   -- faixa fininha (longe): uma linha basta
+        ui.line(lx1 // 1, y1, lx2 // 1, y2, cor)   -- faixa fininha (longe): uma linha basta
       else
-        tri(lx1 - l1, y1, lx1 + l1, y1, lx2 + l2, y2, cor)
-        tri(lx1 - l1, y1, lx2 + l2, y2, lx2 - l2, y2, cor)
+        a, b, c, d = (lx1 - l1) // 1, (lx1 + l1) // 1, (lx2 + l2) // 1, (lx2 - l2) // 1
+        tri(a, y1, b, y1, c, y2, cor)
+        tri(a, y1, c, y2, d, y2, cor)
       end
       lx1, lx2 = lx1 + lw1, lx2 + lw2
     end

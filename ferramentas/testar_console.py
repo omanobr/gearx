@@ -47,11 +47,16 @@ local apertos, segurados = {}, {}
 -- Coordenadas fora de +-32767 (16 bits) quebram no console: na v0.4 objetos colados na
 -- camera mandavam centenas de milhares de pixels e o jogo travou em 2 jogadores.
 local LIMITE = 32767
+-- Numeros quebrados (com casas decimais) tambem nao: o console desenhou errado os
+-- triangulos da pista (v0.6), e os jogos da equipe do Lupi arredondam tudo com // 1.
 local function numeros(...)
   for i = 1, select("#", ...) do
     local v = select(i, ...)
     if type(v) ~= "number" or v ~= v then error("argumento " .. i .. " invalido: " .. tostring(v), 3) end
     if v > LIMITE or v < -LIMITE then error("argumento " .. i .. " fora da faixa do console: " .. v, 3) end
+    if v % 1 ~= 0 and not (Jogo and Jogo.tela and Jogo.tela.pagina) then   -- a tela de teste usa de proposito
+      error("argumento " .. i .. " com casas decimais (" .. v .. "): arredonde com // 1", 3)
+    end
   end
 end
 ui = {}
@@ -140,6 +145,7 @@ while quadro < max_quadros do
   debug.sethook()
   if not ok then
     print("ERRO no quadro " .. quadro .. ":\n" .. erro)
+    print("FALHOU: " .. erro:match("^[^\n]*"))   -- ultima linha: aparece mesmo cortando a saida
     os.exit(1)
   end
   local tela = Jogo.tela
@@ -212,7 +218,7 @@ def main():
     saida = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     texto = saida.stdout + saida.stderr
     print(texto.strip())
-    falhou = "ERRO" in texto or "lua5.4:" in texto or saida.returncode != 0
+    falhou = "ERRO" in texto or "FALHOU" in texto or "lua5.4:" in texto or "traceback" in texto or saida.returncode != 0
     print("\nRESULTADO:", "FALHOU" if falhou else "tudo certo em Lua 5.4 com Latin-9")
     sys.exit(1 if falhou else 0)
 

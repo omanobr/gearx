@@ -23,6 +23,11 @@ local function ret(x0, y0, x1, y1, cor)
   ui.rectfill(x0, y0, x1, y1, cor)
 end
 
+-- triangulo com coordenadas arredondadas: o console desenha errado numeros com casas decimais
+local function tri(x1, y1, x2, y2, x3, y3, cor)
+  ui.trisfill(x1 // 1, y1 // 1, x2 // 1, y2 // 1, x3 // 1, y3 // 1, cor)
+end
+
 local LUZ = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }   -- padrao xadrez (meio transparente)
 
 -- Longe, os objetos tem poucos pixels: desenhamos versoes simplificadas (menos comandos
@@ -48,7 +53,7 @@ local function poste(o, sx, sy, kx, ky, noite)
   ret(ax - 90 * kx, sy - h + esp, ax + 90 * kx, sy - h + esp * 2, Cores.lampada)
   if noite and kx < 0.25 then
     ui.fillp(table.unpack(LUZ))
-    ui.trisfill(ax, sy - h + esp * 2, ax - 260 * kx, sy, ax + 260 * kx, sy, Cores.luz)
+    tri(ax, sy - h + esp * 2, ax - 260 * kx, sy, ax + 260 * kx, sy, Cores.luz)
     ui.fillp()
   end
 end
@@ -69,14 +74,14 @@ local function palmeira(o, sx, sy, kx, ky)
     ui.line(floor(sx), floor(sy), floor(tx), floor(ty), Cores.tronco)
     for k = 1, 2 do
       local f = FOLHAS[k]
-      ui.trisfill(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores.folha)
+      tri(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores.folha)
     end
     return
   end
-  ui.trisfill(sx - 45 * kx, sy, sx + 45 * kx, sy, tx + 25 * kx, ty, Cores.tronco)
-  ui.trisfill(sx - 45 * kx, sy, tx + 25 * kx, ty, tx - 25 * kx, ty, Cores.tronco)
+  tri(sx - 45 * kx, sy, sx + 45 * kx, sy, tx + 25 * kx, ty, Cores.tronco)
+  tri(sx - 45 * kx, sy, tx + 25 * kx, ty, tx - 25 * kx, ty, Cores.tronco)
   for _, f in ipairs(FOLHAS) do
-    ui.trisfill(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores[f[5]])
+    tri(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores[f[5]])
   end
 end
 
@@ -89,7 +94,7 @@ local function placa(o, sx, sy, kx, ky)
   ret(sx - 20 * kx, sy - 420 * ky, sx + 20 * kx, sy, Cores.poste)
   ret(sx - 260 * kx, sy - 760 * ky, sx + 260 * kx, sy - 420 * ky, Cores.placa)
   local s = o.seta
-  ui.trisfill(sx - 120 * s * kx, sy - 720 * ky, sx + 150 * s * kx, sy - 590 * ky, sx - 120 * s * kx, sy - 460 * ky, Cores.preto)
+  tri(sx - 120 * s * kx, sy - 720 * ky, sx + 150 * s * kx, sy - 590 * ky, sx - 120 * s * kx, sy - 460 * ky, Cores.preto)
 end
 
 local function arbusto(o, sx, sy, kx, ky)
@@ -102,9 +107,9 @@ end
 
 local function pedra(o, sx, sy, kx, ky)
   if 280 * ky < MINIMO_PX then return end
-  ui.trisfill(sx - 260 * kx, sy, sx + 260 * kx, sy, sx + 60 * kx, sy - 280 * ky, Cores.pedra)
+  tri(sx - 260 * kx, sy, sx + 260 * kx, sy, sx + 60 * kx, sy - 280 * ky, Cores.pedra)
   if 280 * ky < SIMPLES_PX then return end
-  ui.trisfill(sx - 260 * kx, sy, sx + 60 * kx, sy - 280 * ky, sx - 120 * kx, sy - 200 * ky, Cores.cinza)
+  tri(sx - 260 * kx, sy, sx + 60 * kx, sy - 280 * ky, sx - 120 * kx, sy - 200 * ky, Cores.cinza)
 end
 
 local function portico(o, sx, sy, kx, ky)
