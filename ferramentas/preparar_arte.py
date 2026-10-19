@@ -71,7 +71,9 @@ FUNDOS = [
 
 ARQUIVO_CARROS = "Sprites de Carro Esportivo em Pixel Art.png"
 GRADE_CARROS = 5            # a arte dos carros foi desenhada em blocos de 5x5 pixels
-VISTAS = ["reto", "esq", "dir"]   # ordem dos carros na imagem, da esquerda para a direita
+# ordem dos carros na imagem, da esquerda para a direita. O 2o mostra o lado DIREITO do carro
+# (e assim que se ve um carro virando para a direita, de tras); o 3o, o lado esquerdo.
+VISTAS = ["reto", "dir", "esq"]
 
 # Cores dos carros. None = cor original (prata).
 CORES_CARROS_LISTA = [

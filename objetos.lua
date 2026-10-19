@@ -15,9 +15,11 @@ O.largura = { poste = 0.12, palmeira = 0.18, placa = 0.3, arbusto = 0.3, pedra =
 
 local floor, max, min = math.floor, math.max, math.min
 
+-- retangulo com pelo menos 1 pixel (// 1 arredonda para baixo, mais barato que math.floor)
 local function ret(x0, y0, x1, y1, cor)
-  x0, y0 = floor(x0), floor(y0)
-  x1, y1 = max(floor(x1), x0 + 1), max(floor(y1), y0 + 1)
+  x0, y0, x1, y1 = x0 // 1, y0 // 1, x1 // 1, y1 // 1
+  if x1 <= x0 then x1 = x0 + 1 end
+  if y1 <= y0 then y1 = y0 + 1 end
   ui.rectfill(x0, y0, x1, y1, cor)
 end
 
@@ -118,9 +120,20 @@ end
 
 local DESENHOS = { poste = poste, palmeira = palmeira, placa = placa, arbusto = arbusto, pedra = pedra, portico = portico }
 
-function O.desenhar(o, sx, sy, kx, ky, noite)
+-- Ate onde cada objeto vai para os lados e para cima (unidades do mundo). Serve para pular
+-- os que estao fora da tela: economiza desenho e evita mandar ao console coordenadas
+-- gigantes (um objeto colado na camera daria centenas de milhares de pixels).
+local ALCANCE = { poste = 600, palmeira = 800, placa = 260, arbusto = 400, pedra = 260, portico = 1500 }
+local ALTURA = { poste = 1550, palmeira = 1700, placa = 760, arbusto = 700, pedra = 280, portico = 1800 }
+local ESCALA_MAX = 8   -- mais perto que isto, o objeto esta praticamente dentro da camera
+
+-- (sx, sy) = base do objeto na tela; W x H = tamanho da visao
+function O.desenhar(o, sx, sy, kx, ky, noite, W, H)
   local f = DESENHOS[o.tipo]
-  if f then f(o, sx, sy, kx, ky, noite) end
+  if not f or kx > ESCALA_MAX or sy < 0 or sy - ALTURA[o.tipo] * ky > H then return end
+  local alcance = ALCANCE[o.tipo] * kx
+  if sx + alcance < 0 or sx - alcance > W then return end
+  f(o, sx, sy, kx, ky, noite)
 end
 
 return O

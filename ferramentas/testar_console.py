@@ -27,6 +27,7 @@ ROTEIRO = os.path.join(construir.PASTA_BUILD, "console_teste.lua")
 CENARIOS = [
     ("titulo, menu e corrida de 3 (comandos simulados)", "menu", False),
     ("1 jogador, Por do Sol, 2 voltas", "corrida 1 3 2", False),
+    ("2 jogadores, Orla", "corrida 2 1 1", False),
     ("3 jogadores, Crepusculo", "corrida 3 4 1", False),
     ("instrucoes: 1 jogador, noite", "corrida 1 5 1", True),
     ("instrucoes: 2 jogadores, noite", "corrida 2 5 1", True),
@@ -42,10 +43,14 @@ LEFT, RIGHT, UP, DOWN, BTN_Z, BTN_X, BTN_F, BTN_G, BTN_Q, BTN_E = 1, 2, 3, 4, 5,
 local quadro = 0
 local apertos, segurados = {}, {}
 
+-- Coordenadas fora de +-32767 (16 bits) quebram no console: na v0.4 objetos colados na
+-- camera mandavam centenas de milhares de pixels e o jogo travou em 2 jogadores.
+local LIMITE = 32767
 local function numeros(...)
   for i = 1, select("#", ...) do
     local v = select(i, ...)
     if type(v) ~= "number" or v ~= v then error("argumento " .. i .. " invalido: " .. tostring(v), 3) end
+    if v > LIMITE or v < -LIMITE then error("argumento " .. i .. " fora da faixa do console: " .. v, 3) end
   end
 end
 ui = {}

@@ -16,7 +16,7 @@ C.HORIZONTE = 0.45               -- altura do horizonte (fracao da altura da tel
 -- Quantos segmentos desenhar para frente, conforme o numero de jogadores.
 -- Menos segmentos = jogo mais leve. O console executa ~50-60 mil instrucoes Lua por
 -- quadro: confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
-C.DISTANCIA = { 150, 100, 60 }
+C.DISTANCIA = { 150, 100, 55 }
 
 -- Fisica do carro (por segundo)
 C.VEL_MAX = C.SEG * 60           -- velocidade maxima: 60 segmentos por segundo

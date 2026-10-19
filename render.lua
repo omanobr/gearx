@@ -18,6 +18,8 @@ local floor, min, max, log = math.floor, math.min, math.max, math.log
 -- projecoes guardadas durante a passada da estrada (reaproveitadas a cada quadro):
 -- ponto de perto de cada segmento (o de longe e o ponto do segmento seguinte)
 local PX1, PY1, PS1, PCLIP, PSEG = {}, {}, {}, {}, {}
+-- trapezios da estrada desta visao (bordas de perto e de longe, cor, segmento)
+local TX1, TY1, TW1, TX2, TY2, TW2, TCLARO, TIDX = {}, {}, {}, {}, {}, {}, {}, {}
 -- carros visiveis nesta visao
 local VIS_N, VIS_C = {}, {}
 
@@ -65,14 +67,19 @@ end
 
 local XADREZ = { 0xCC, 0xCC, 0x33, 0x33, 0xCC, 0xCC, 0x33, 0x33 }
 
+-- Um trapezio da estrada: grama, zebra, asfalto e faixas. Os trapezios viram dois
+-- triangulos direto aqui (sem chamar quad): este e o trecho mais repetido do quadro.
 local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice)
+  local tri = ui.trisfill
   local k = claro and 1 or 2
   local r1, r2 = w1 / 6, w2 / 6
   ui.rectfill(0, y2, W, y1 + 1, cores.grama[k])
   if cores.direita then
     ui.rectfill(floor(min(x1 + w1 + r1, x2 + w2 + r2)), y2, W, y1 + 1, cores.direita[k])
   end
-  quad(x1 - w1 - r1, y1, x1 + w1 + r1, y1, x2 + w2 + r2, y2, x2 - w2 - r2, y2, cores.zebra[k])
+  local a, b, c, d, cor = x1 - w1 - r1, x1 + w1 + r1, x2 + w2 + r2, x2 - w2 - r2, cores.zebra[k]
+  tri(a, y1, b, y1, c, y2, cor)
+  tri(a, y1, c, y2, d, y2, cor)
   if indice <= 2 then
     -- linha de largada/chegada quadriculada
     quad(x1 - w1, y1, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2, Cores.branco)
@@ -81,16 +88,20 @@ local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice)
     ui.fillp()
     return
   end
-  quad(x1 - w1, y1, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2, cores.asfalto[k])
+  a, b, c, d, cor = x1 - w1, x1 + w1, x2 + w2, x2 - w2, cores.asfalto[k]
+  tri(a, y1, b, y1, c, y2, cor)
+  tri(a, y1, c, y2, d, y2, cor)
   if claro then
     local l1, l2 = w1 / 60, w2 / 60
     local lw1, lw2 = w1 * 2 / C.FAIXAS, w2 * 2 / C.FAIXAS
     local lx1, lx2 = x1 - w1 + lw1, x2 - w2 + lw2
+    cor = cores.faixa
     for _ = 1, C.FAIXAS - 1 do
       if l1 < 0.8 then
-        ui.line(floor(lx1), y1, floor(lx2), y2, cores.faixa)   -- faixa fininha (longe): uma linha basta
+        ui.line(floor(lx1), y1, floor(lx2), y2, cor)   -- faixa fininha (longe): uma linha basta
       else
-        quad(lx1 - l1, y1, lx1 + l1, y1, lx2 + l2, y2, lx2 - l2, y2, cores.faixa)
+        tri(lx1 - l1, y1, lx1 + l1, y1, lx2 + l2, y2, cor)
+        tri(lx1 - l1, y1, lx2 + l2, y2, lx2 - l2, y2, cor)
       end
       lx1, lx2 = lx1 + lw1, lx2 + lw2
     end
@@ -172,12 +183,14 @@ function R.visao(corrida, carro, v, quadro)
   local x, dx = 0, -(curvas[base % N + 1] * base_pct)
   local aberto, escondido = false, false
   local aX1, aY1, aW1, aX2, aY2, aW2, aClaro, aIdx
+  local nt = 0   -- trapezios guardados (TX1...), desenhados depois do laco
   local z = base * SEG - cam
   local s1, X1, Y1
   if z > CAM_PROF then
     s1 = CAM_PROF / z
     X1, Y1 = hw + s1 * (x - cam_x) * hw, hy + s1 * (cam_y - alturas[base % N + 1]) * fy
   end
+  local prof_hw, prof_fy = CAM_PROF * hw, CAM_PROF * fy
   for n = 0, v.dist - 1 do
     local i = (base + n) % N + 1
     local i2 = i == N and 1 or i + 1
@@ -185,8 +198,8 @@ function R.visao(corrida, carro, v, quadro)
     PSEG[n] = i
     local z2 = z + SEG
     local s2 = CAM_PROF / z2
-    local X2 = hw + s2 * (x + dx - cam_x) * hw
-    local Y2 = hy + s2 * (cam_y - alturas[i2]) * fy
+    local X2 = hw + prof_hw * (x + dx - cam_x) / z2
+    local Y2 = hy + prof_fy * (cam_y - alturas[i2]) / z2
     PX1[n], PY1[n], PS1[n] = X1, Y1, s1
     if s1 then
       local iy1, iy2 = Y1 // 1, Y2 // 1
@@ -201,7 +214,10 @@ function R.visao(corrida, carro, v, quadro)
         if aberto and claro == aClaro and i > 2 and aIdx > 2 and not escondido and aY1 - iy2 <= JUNTAR_PX then
           aX2, aY2, aW2 = X2, iy2, W2   -- estica o trapezio aberto ate este segmento
         else
-          if aberto then segmento(W, cores, aClaro, aX1, aY1, aW1, aX2, aY2, aW2, aIdx) end
+          if aberto then
+            nt = nt + 1
+            TX1[nt], TY1[nt], TW1[nt], TX2[nt], TY2[nt], TW2[nt], TCLARO[nt], TIDX[nt] = aX1, aY1, aW1, aX2, aY2, aW2, aClaro, aIdx
+          end
           aberto, aClaro, aIdx = true, claro, i
           aX1, aY1, aW1, aX2, aY2, aW2 = cX1, iy1, W1, X2, iy2, W2
         end
@@ -217,9 +233,19 @@ function R.visao(corrida, carro, v, quadro)
     dx = dx + curvas[i]
   end
   PX1[v.dist], PY1[v.dist], PS1[v.dist] = X1, Y1, s1   -- borda de longe do ultimo segmento
-  if aberto then segmento(W, cores, aClaro, aX1, aY1, aW1, aX2, aY2, aW2, aIdx) end
+  if aberto then
+    nt = nt + 1
+    TX1[nt], TY1[nt], TW1[nt], TX2[nt], TY2[nt], TW2[nt], TCLARO[nt], TIDX[nt] = aX1, aY1, aW1, aX2, aY2, aW2, aClaro, aIdx
+  end
   -- faixa entre o panorama e o ponto mais distante da estrada (mar/horizonte)
   if maxy > fim_fundo then ui.rectfill(0, fim_fundo, W, maxy, f.cor_mar) end
+  -- Os trapezios sao desenhados de LONGE para PERTO, cada um descendo 1 linha a mais: o de
+  -- perto, desenhado depois, cobre a sobra. Assim nao fica fresta entre os blocos da pista,
+  -- seja qual for o jeito de o aparelho arredondar as bordas (no console apareciam linhas
+  -- verdes da grama entre os blocos).
+  for t = nt, 1, -1 do
+    segmento(W, cores, TCLARO[t], TX1[t], TY1[t] + 1, TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t])
+  end
 
   -- 2) quais carros estao na frente desta camera
   local nv = 0
@@ -258,7 +284,7 @@ function R.visao(corrida, carro, v, quadro)
       if lista then
         local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
         for _, o in ipairs(lista) do
-          Objetos.desenhar(o, px + ox * o.x, py, kx, ky, noite)
+          Objetos.desenhar(o, px + ox * o.x, py, kx, ky, noite, W, H)
         end
       end
       while vc <= nv and VIS_N[vc] == n do
@@ -271,7 +297,11 @@ function R.visao(corrida, carro, v, quadro)
         if largura >= 3 then
           local k = nivel(largura)
           local tam = TAM.reto[k]
-          ui.spr(SPR[outro.cor].reto[k], floor(sx - tam[1] / 2), floor(sy - tam[2]))
+          local cx, cy = floor(sx - tam[1] / 2), floor(sy - tam[2])
+          -- so se aparecer na tela (carros atras da camera dariam coordenadas gigantes)
+          if cx < W and cx + tam[1] > 0 and cy < H and sy > 0 then
+            ui.spr(SPR[outro.cor].reto[k], cx, cy)
+          end
         end
         vc = vc + 1
       end
