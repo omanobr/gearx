@@ -17,12 +17,12 @@ Comece pelo arquivo `game.lua`, função `update`. Na pasta `img` estão os grá
 
 **Teclado no simulador:**
 
-| Tecla | Botão do Lupi | No jogo |
+| Tecla | Botão do Lupi | Controle (estilo SNES) | No jogo |
 |---|---|---|
-| `W` `A` `S` `D` | Direcional | `A`/`D` vira, `W` também acelera, `S` também freia |
-| `K` | Z | Acelerar / confirmar |
-| `J` | X | Frear / voltar |
-| `L` `M` `G` `H` | Q, E, F, G | Nitro |
+| `W` `A` `S` `D` | Direcional | Direcional | `A`/`D` vira, `W` também acelera, `S` também freia |
+| `K` | Z | B | Acelerar / confirmar |
+| `J` | X | A | Frear / voltar |
+| `L` `M` `G` `H` | Q, E, F, G | X, Y, L, R | Nitro (R no título abre a tela de teste) |
 
 > No simulador, o teclado aperta os botões de **todos os jogadores ao mesmo tempo**. Para testar 2 ou 3 pessoas de verdade, ligue controles USB/Bluetooth no PC (1º controle = J1, 2º = J2...). Outra opção é deixar o computador pilotar J2 e J3 no painel **"Modo de teste"** da página.
 

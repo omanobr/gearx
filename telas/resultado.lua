@@ -50,7 +50,7 @@ function Tela:desenhar()
     T.grande(l.tempo, 368 - T.largura(l.tempo, 2), y, 2, cor)
   end
   if (self.t // 30) % 2 == 0 then
-    T.p_centro("Z: CORRER DE NOVO     X: MENU", 240, 246, Cores.branco)
+    T.p_centro(Entrada.NOME.confirmar .. ": CORRER DE NOVO     " .. Entrada.NOME.voltar .. ": MENU", 240, 246, Cores.branco)
   end
 end
 

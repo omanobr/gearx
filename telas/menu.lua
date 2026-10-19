@@ -96,8 +96,11 @@ function Tela:desenhar()
   end
   previa_pista(op, 120, 140, 240, 56)
 
-  T.p_centro("CIMA/BAIXO ESCOLHE   ESQ/DIR MUDA   Z CONFIRMA   X VOLTA", 240, 236, Cores.cinza)
-  T.p_centro("NA CORRIDA: Z ACELERA  X FREIA  Q/E NITRO", 240, 246, Cores.cinza)
+  local nome = Entrada.NOME
+  T.p_centro("CIMA/BAIXO ESCOLHE   ESQ/DIR MUDA   " .. nome.confirmar .. " CONFIRMA   " .. nome.voltar .. " VOLTA",
+    240, 236, Cores.cinza)
+  T.p_centro("NA CORRIDA: " .. nome.acelerar .. " ACELERA  " .. nome.frear .. " FREIA  " .. nome.nitro .. " NITRO",
+    240, 246, Cores.cinza)
 end
 
 return Tela

@@ -59,6 +59,15 @@ MANTER_CORES = True
 # cortada em pedacos de no maximo LIMITE_BYTES_IMAGEM bytes: mais alta = mais pedacos.
 ALTURA_FUNDO = 110
 
+# Telas divididas (2 e 3 jogadores) usam so a parte de baixo da panoramica (a parte que
+# aparece na visao de 135 px: horizonte em 135 x 0,45 = 60, mais 3), em pedacos estreitos.
+# Cada visao desenha os seus pedacos, sem repetir a mesma imagem duas vezes seguidas (no
+# console, o jogo travou em 2 jogadores logo depois de desenhar a mesma imagem 2 vezes).
+# Pedacos mais estreitos que a visao de 3 jogadores (240 px): cada visao sempre mostra pelo
+# menos 2, e a leitura do cartao fica so com o que aparece.
+ALTURA_FUNDO_DIVIDIDO = 63
+LARGURA_PECA_DIVIDIDA = 220
+
 # Fundos: nome usado no codigo, arquivo, e recorte (x0, y0, x1, y1) na imagem original.
 # A borda de baixo do recorte fica um pouco abaixo da linha do mar.
 FUNDOS = [
@@ -349,23 +358,30 @@ def main():
     for pasta in ("fundos", "carros"):
         shutil.rmtree(os.path.join(DESTINO_IMG, pasta), ignore_errors=True)
 
+    def cortar(img, altura, sufixo, largura_max=512):
+        """Corta a panoramica em pedacos que cabem no limite de bytes por imagem."""
+        largura = img.size[0]
+        n_pecas = -(-largura // min(largura_max, LIMITE_BYTES_IMAGEM // altura))
+        pecas, larguras, x = [], [], 0
+        for i in range(n_pecas):
+            lp = (largura - x) // (n_pecas - i)
+            salvar(img.crop((x, 0, x + lp, altura)), "fundos", "%s%s_%d.png" % (nome, sufixo, i + 1))
+            pecas.append("%s%s_%d" % (nome, sufixo, i + 1)); larguras.append(lp)
+            x += lp
+        return pecas, larguras
+
     dados_fundos = []
     previa = []
     for nome, img in fundos:
         img = aplicar_paleta(img, paleta_fundos)
         cores_img = list({p[:3] for p in pixels_de(img)})
         largura = img.size[0]
-        n_pecas = -(-largura // min(512, LIMITE_BYTES_IMAGEM // ALTURA_FUNDO))
-        pecas, larguras = [], []
-        x = 0
-        for i in range(n_pecas):
-            lp = (largura - x) // (n_pecas - i)
-            salvar(img.crop((x, 0, x + lp, ALTURA_FUNDO)), "fundos", "%s_%d.png" % (nome, i + 1))
-            pecas.append("%s_%d" % (nome, i + 1)); larguras.append(lp)
-            x += lp
+        pecas, larguras = cortar(img, ALTURA_FUNDO, "")
+        baixo = img.crop((0, ALTURA_FUNDO - ALTURA_FUNDO_DIVIDIDO, largura, ALTURA_FUNDO))
+        pecas_b, larguras_b = cortar(baixo, ALTURA_FUNDO_DIVIDIDO, "_baixo", LARGURA_PECA_DIVIDIDA)
         ceu = mais_proxima(cor_media(img, range(0, 3)), cores_img)
         mar = mais_proxima(cor_media(img, range(ALTURA_FUNDO - 3, ALTURA_FUNDO)), cores_img)
-        dados_fundos.append((nome, pecas, larguras, largura, ceu, mar))
+        dados_fundos.append((nome, pecas, larguras, largura, ceu, mar, pecas_b, larguras_b))
         previa.append(img)
 
     linha_carros = []
@@ -378,10 +394,12 @@ def main():
     with open(DADOS_LUA, "w", encoding="utf-8", newline="\n") as f:
         f.write("-- Gerado por ferramentas/preparar_arte.py. Nao edite a mao: rode o script de novo.\n")
         f.write("Arte = {\n  fundos = {\n")
-        for nome, pecas, larguras, largura, ceu, mar in dados_fundos:
-            f.write('    %s = { pecas = { %s }, larguras = { %s }, largura = %d, altura = %d, ceu = %s, mar = %s },\n' % (
+        for nome, pecas, larguras, largura, ceu, mar, pecas_b, larguras_b in dados_fundos:
+            f.write('    %s = { pecas = { %s }, larguras = { %s }, largura = %d, altura = %d, ceu = %s, mar = %s, '
+                    'baixo = { pecas = { %s }, larguras = { %s }, altura = %d } },\n' % (
                 nome, ", ".join('"%s"' % p for p in pecas), ", ".join(str(l) for l in larguras),
-                largura, ALTURA_FUNDO, cor_hex(ceu), cor_hex(mar)))
+                largura, ALTURA_FUNDO, cor_hex(ceu), cor_hex(mar),
+                ", ".join('"%s"' % p for p in pecas_b), ", ".join(str(l) for l in larguras_b), ALTURA_FUNDO_DIVIDIDO))
         f.write("  },\n  carros = {\n")
         f.write("    cores = { %s },\n" % ", ".join('"%s"' % c for c, _ in CORES_CARROS_LISTA))
         f.write("    niveis = %d,\n" % NIVEIS_CARRO)

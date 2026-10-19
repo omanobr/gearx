@@ -26,6 +26,7 @@ ROTEIRO = os.path.join(construir.PASTA_BUILD, "console_teste.lua")
 # (descricao, argumentos, medir instrucoes com funcoes nativas)
 CENARIOS = [
     ("titulo, menu e corrida de 3 (comandos simulados)", "menu", False),
+    ("tela de teste (R no titulo), paginas 1 e 2", "teste", False),
     ("1 jogador, Por do Sol, 2 voltas", "corrida 1 3 2", False),
     ("2 jogadores, Orla", "corrida 2 1 1", False),
     ("3 jogadores, Crepusculo", "corrida 3 4 1", False),
@@ -113,6 +114,9 @@ if cenario == "menu" then
                     [110] = LEFT, [120] = LEFT, [130] = DOWN, [140] = BTN_Z }
   for q, b in pairs(roteiro) do apertos[q] = { [b] = true } end
   max_quadros = 1500
+elseif cenario == "teste" then
+  for q, b in pairs({ [30] = BTN_G, [60] = BTN_Z, [120] = BTN_X }) do apertos[q] = { [b] = true } end
+  max_quadros = 180
 else
   local n, pista, voltas = tonumber(arg[2]) or 3, tonumber(arg[3]) or 5, tonumber(arg[4]) or 1
   package.preload["dev_config"] = function()
@@ -139,7 +143,8 @@ while quadro < max_quadros do
     os.exit(1)
   end
   local tela = Jogo.tela
-  local nome = (tela.corrida and "corrida") or (tela.linhas and "resultado") or (tela.sel and "menu") or "titulo"
+  local nome = (tela.corrida and "corrida") or (tela.linhas and "resultado") or (tela.sel and "menu")
+    or (tela.pagina and ("teste" .. tela.pagina)) or "titulo"
   telas[nome] = (telas[nome] or 0) + 1
   if nome == "corrida" and tela.corrida.estado == "correndo" then
     soma, pico, medidos = soma + centenas * 100, math.max(pico, centenas * 100), medidos + 1

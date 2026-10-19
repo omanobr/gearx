@@ -42,11 +42,13 @@ function R.preparar()
   end
   LARGURA_NIVEL1 = TAM.reto[1][1]
   for nome, f in pairs(Arte.fundos) do
-    f.sprites, f.inicio = {}, {}
-    local x = 0
-    for i, peca in ipairs(f.pecas) do
-      f.sprites[i], f.inicio[i] = Sprites.img.fundos[peca], x
-      x = x + f.larguras[i]
+    for _, p in ipairs({ f, f.baixo }) do   -- panoramica inteira e a versao baixa (telas divididas)
+      p.sprites, p.inicio = {}, {}
+      local x = 0
+      for i, peca in ipairs(p.pecas) do
+        p.sprites[i], p.inicio[i] = Sprites.img.fundos[peca], x
+        x = x + p.larguras[i]
+      end
     end
     f.cor_ceu, f.cor_mar = Palette.hex(f.ceu), Palette.hex(f.mar)
   end
@@ -113,33 +115,44 @@ local function topo_fundo(f, hy)
   return floor(hy - f.altura + 3)
 end
 
+-- Qual panoramica usar numa visao: nas telas divididas o topo da inteira ficaria acima da
+-- visao, e o console TRAVA ao desenhar uma imagem cortada pelo topo da janela de recorte
+-- (ui.clip). A versao "baixo" (so a parte de baixo) comeca exatamente no topo da visao.
+local function panoramica(f, hy)
+  if topo_fundo(f, hy) < 0 then return f.baixo end
+  return f
+end
+
 -- Ceu + panorama de todas as visoes (o panorama desliza nas curvas ate o limite da imagem).
--- Cada pedaco do panorama e desenhado em todas as visoes em seguida: assim o aparelho le a
--- imagem do cartao uma vez so por quadro (limites de 150 KB e 32 cargas por quadro).
-local FUNDO_X = {}
+-- Desenha visao por visao e NUNCA a mesma imagem duas vezes seguidas: no console, o jogo
+-- travou em 2 jogadores logo depois de desenhar o mesmo pedaco nas duas visoes em seguida.
+-- Nas telas divididas os pedacos sao estreitos (so a parte que aparece e lida do cartao).
 function R.fundos(pista, visoes, carros)
   local f = Arte.fundos[pista.fundo]
+  local p = panoramica(f, visoes[1].hy)   -- todas as visoes de uma tela tem a mesma altura
+  local ultima                             -- ultima imagem desenhada
   for j, v in ipairs(visoes) do
     local carro = carros[j]
     local margem = max(0, (f.largura - v.w) / 2)
     carro.fundo_x = max(-margem, min(margem, carro.fundo_x))
-    FUNDO_X[j] = floor(-(margem + carro.fundo_x))
-    local y = topo_fundo(f, v.hy)
-    if y > 0 then
-      ui.clip(v.x, v.y, v.w, v.h)
-      ui.camera(-v.x, -v.y)
-      ui.rectfill(0, 0, v.w, y, f.cor_ceu)
-    end
-  end
-  for i, spr in ipairs(f.sprites) do
-    local lp = f.larguras[i]
-    for j, v in ipairs(visoes) do
-      local x = FUNDO_X[j] + f.inicio[i]
-      if x + lp > 0 and x < v.w then
-        ui.clip(v.x, v.y, v.w, v.h)
-        ui.camera(-v.x, -v.y)
-        ui.spr(spr, x, topo_fundo(f, v.hy))
+    local x0 = floor(-(margem + carro.fundo_x))
+    local y = max(0, topo_fundo(p, v.hy))
+    ui.clip(v.x, v.y, v.w, v.h)
+    ui.camera(-v.x, -v.y)
+    if y > 0 then ui.rectfill(0, 0, v.w, y, f.cor_ceu) end
+    local i1, i2                           -- primeiro e ultimo pedaco que aparecem
+    for i = 1, #p.sprites do
+      local x = x0 + p.inicio[i]
+      if x + p.larguras[i] > 0 and x < v.w then
+        i1 = i1 or i
+        i2 = i
       end
+    end
+    if i1 then
+      local de, ate, passo = i1, i2, 1
+      if p.sprites[i1] == ultima then de, ate, passo = i2, i1, -1 end   -- evita repetir a imagem
+      for i = de, ate, passo do ui.spr(p.sprites[i], x0 + p.inicio[i], y) end
+      ultima = p.sprites[ate]
     end
   end
 end
@@ -162,7 +175,11 @@ function R.visao(corrida, carro, v, quadro)
   ui.clip(v.x, v.y, W, H)
   ui.camera(-v.x, -v.y)
   local f = Arte.fundos[pista.fundo]
-  local fim_fundo = topo_fundo(f, hy) + f.altura
+  local p = panoramica(f, hy)
+  local fim_fundo = max(0, topo_fundo(p, hy)) + p.altura
+  -- bordas desta visao que sao bordas da tela (uma imagem so pode ser cortada por elas)
+  local tela_esq, tela_dir = v.x == 0, v.x + W >= C.LARGURA
+  local tela_cima, tela_baixo = v.y == 0, v.y + H >= C.ALTURA
 
   -- camera fica atras do carro
   local cam = carro.z - C.JOGADOR_Z
@@ -239,12 +256,12 @@ function R.visao(corrida, carro, v, quadro)
   end
   -- faixa entre o panorama e o ponto mais distante da estrada (mar/horizonte)
   if maxy > fim_fundo then ui.rectfill(0, fim_fundo, W, maxy, f.cor_mar) end
-  -- Os trapezios sao desenhados de LONGE para PERTO, cada um descendo 1 linha a mais: o de
-  -- perto, desenhado depois, cobre a sobra. Assim nao fica fresta entre os blocos da pista,
-  -- seja qual for o jeito de o aparelho arredondar as bordas (no console apareciam linhas
-  -- verdes da grama entre os blocos).
+  -- Os trapezios sao desenhados de LONGE para PERTO, cada um com 1 linha a mais em cima e
+  -- 2 embaixo: o de perto, desenhado depois, cobre a sobra. O triangulo do console deixa de
+  -- fora a linha de cima e a de baixo (apareciam linhas verdes da grama entre os blocos,
+  -- maiores ao longe, onde cada bloco tem poucas linhas); com a sobra nao fica fresta.
   for t = nt, 1, -1 do
-    segmento(W, cores, TCLARO[t], TX1[t], TY1[t] + 1, TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t])
+    segmento(W, cores, TCLARO[t], TX1[t], TY1[t] + 2, TW1[t], TX2[t], TY2[t] - 1, TW2[t], TIDX[t])
   end
 
   -- 2) quais carros estao na frente desta camera
@@ -297,11 +314,15 @@ function R.visao(corrida, carro, v, quadro)
         if largura >= 3 then
           local k = nivel(largura)
           local tam = TAM.reto[k]
-          local cx, cy = floor(sx - tam[1] / 2), floor(sy - tam[2])
-          -- so se aparecer na tela (carros atras da camera dariam coordenadas gigantes)
-          if cx < W and cx + tam[1] > 0 and cy < H and sy > 0 then
-            ui.spr(SPR[outro.cor].reto[k], cx, cy)
-          end
+          local w, h = tam[1], tam[2]
+          local cx, cy = floor(sx - w / 2), floor(sy - h)
+          -- So desenha se nenhuma borda da janela de recorte cortar a imagem (bordas da
+          -- visao que nao sao bordas da tela, ou a linha de um morro): no console, imagem
+          -- cortada pelo recorte travou o jogo. Fora da tela tambem nao (coordenadas gigantes).
+          local cabe = cx < W and cx + w > 0 and cy < H and cy + h > 0
+            and (cx >= 0 or tela_esq) and (cx + w <= W or tela_dir) and (cy >= 0 or tela_cima)
+            and (cy + h <= recorte or (recorte == H and tela_baixo))
+          if cabe then ui.spr(SPR[outro.cor].reto[k], cx, cy) end
         end
         vc = vc + 1
       end

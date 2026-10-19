@@ -21,6 +21,12 @@ local function algum(botao)
   return false
 end
 
+-- Nomes dos botoes num controle estilo Super Nintendo, para os textos da tela. O Lupi liga
+-- os botoes pela posicao: BTN_Z = o de baixo (B), BTN_X = o da direita (A), BTN_Q = o de
+-- cima (X), BTN_E = o da esquerda (Y), BTN_F = L, BTN_G = R.
+E.NOME = { confirmar = "B", voltar = "A", acelerar = "B", frear = "A", nitro = "X/Y/L/R", teste = "R" }
+
+function E.teste() return algum(BTN_G) end
 function E.confirmar() return algum(BTN_Z) end
 function E.voltar() return algum(BTN_X) end
 function E.cima() return algum(UP) end

@@ -98,7 +98,8 @@ Custo de cada comando na drawlist:
 - Lua 5.5 no simulador; o console usa **Lua 5.4**. Escreva código compatível com 5.4.
 - No console os arquivos `.lua` ficam em **Latin-9** (o simulador lê UTF-8) e a biblioteca `utf8` não funciona com eles ("invalid UTF-8 code"). Trate letras acentuadas byte a byte (veja `texto.lua`).
 - No console, as imagens de `Sprites` **não têm `width`/`height`** (a v0.3 quebrou lendo `.width`): só sirva-as ao `ui.spr`. Os tamanhos dos carros vêm de `Arte.carros.tamanho` (`dados_arte.lua`). Os jogos oficiais usam `Sprites.find("nome")`, que o console tem e o simulador não.
-- No console, as bordas de `ui.rectfill`/`ui.trisfill` não batem com as do simulador (o simulador trata `x1`/`y1` do `rectfill` como exclusivos): emendas exatas entre formas deixam frestas de 1 pixel. Sobreponha 1 pixel e desenhe de trás para frente.
+- No console, as bordas de `ui.rectfill`/`ui.trisfill` não batem com as do simulador (o simulador trata `x1`/`y1` do `rectfill` como exclusivos): emendas exatas entre formas deixam frestas (o triângulo parece deixar de fora a linha de cima e a de baixo). Sobreponha (1 linha em cima, 2 embaixo) e desenhe de trás para frente.
+- Botões por posição num controle estilo SNES: `BTN_Z` = baixo (B), `BTN_X` = direita (A), `BTN_Q` = cima (X), `BTN_E` = esquerda (Y), `BTN_F` = L, `BTN_G` = R.
 - Coordenadas gigantes (objetos atrás da câmera) travaram o console: mantenha tudo em ±32767 e pule o que está fora da tela.
 - `update(frame)`: `frame` chega como número decimal (`63.0`). Use contadores próprios.
 - Cores: `ui.palset` interpreta o valor como **BGR555** (vermelho nos bits baixos), igual ao `lupi-codec`.

@@ -17,6 +17,7 @@ local TELAS = {
   menu = require "telas.menu",
   corrida = require "telas.corrida",
   resultado = require "telas.resultado",
+  teste = require "telas.teste",
 }
 
 Jogo = {
