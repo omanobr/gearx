@@ -26,7 +26,7 @@ Comece pelo arquivo `game.lua`, função `update`. Na pasta `img` estão os grá
 
 > No simulador, o teclado aperta os botões de **todos os jogadores ao mesmo tempo**. Para testar 2 ou 3 pessoas de verdade, ligue controles USB/Bluetooth no PC (1º controle = J1, 2º = J2...). Outra opção é deixar o computador pilotar J2 e J3 no painel **"Modo de teste"** da página.
 
-**Painel "Modo de teste"** (lado direito da página): pula direto para a corrida, escolhe a pista e o número de jogadores, liga o piloto automático e mostra quanto tempo o Lua gasta por quadro. Essas opções só existem no simulador; não vão para o console.
+**Painel "Modo de teste"** (lado direito da página): pula direto para a corrida, escolhe a pista e o número de jogadores, liga o piloto automático e mede os **limites do aparelho** (instruções Lua, lista de desenho e imagens lidas por quadro), mostrando média, pico e limite de cada um (verde: folgado; amarelo: perto; vermelho: passou). Essas opções só existem no simulador; não vão para o console.
 
 **Erros:** se o código Lua tiver um erro, ele aparece numa **caixa vermelha** acima da tela do jogo, com o arquivo e a linha.
 

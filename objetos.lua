@@ -23,10 +23,23 @@ end
 
 local LUZ = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }   -- padrao xadrez (meio transparente)
 
+-- Longe, os objetos tem poucos pixels: desenhamos versoes simplificadas (menos comandos
+-- na drawlist do aparelho, que aceita 18 KB por quadro) e pulamos os que somem.
+local MINIMO_PX = 3    -- objetos mais baixos que isto nao sao desenhados
+local SIMPLES_PX = 14  -- abaixo desta altura, versao simplificada
+
 local function poste(o, sx, sy, kx, ky, noite)
   local h = 1500 * ky
+  if h < MINIMO_PX then return end
   ret(sx - 25 * kx, sy - h, sx + 25 * kx, sy, Cores.poste)
   local lado = o.x > 0 and -1 or 1          -- o braco aponta para a pista
+  if h < SIMPLES_PX then
+    if noite then   -- longe, de noite: so o ponto de luz da lampada
+      local ax = sx + lado * 330 * kx
+      ret(ax - 1, sy - h, ax + 1, sy - h + 2, Cores.lampada)
+    end
+    return
+  end
   local ax = sx + lado * 330 * kx
   local esp = max(1, 35 * ky)
   ret(min(sx, ax), sy - h, max(sx, ax), sy - h + esp, Cores.poste)
@@ -47,7 +60,17 @@ local FOLHAS = {
 
 local function palmeira(o, sx, sy, kx, ky)
   local h = 1400 * ky
+  if h < MINIMO_PX then return end
   local tx, ty = sx + (o.x > 0 and 1 or -1) * 140 * kx, sy - h
+  if h < SIMPLES_PX then
+    -- longe: tronco e as duas folhas de baixo (3 comandos em vez de 7)
+    ui.line(floor(sx), floor(sy), floor(tx), floor(ty), Cores.tronco)
+    for k = 1, 2 do
+      local f = FOLHAS[k]
+      ui.trisfill(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores.folha)
+    end
+    return
+  end
   ui.trisfill(sx - 45 * kx, sy, sx + 45 * kx, sy, tx + 25 * kx, ty, Cores.tronco)
   ui.trisfill(sx - 45 * kx, sy, tx + 25 * kx, ty, tx - 25 * kx, ty, Cores.tronco)
   for _, f in ipairs(FOLHAS) do
@@ -56,6 +79,11 @@ local function palmeira(o, sx, sy, kx, ky)
 end
 
 local function placa(o, sx, sy, kx, ky)
+  if 760 * ky < MINIMO_PX then return end
+  if 760 * ky < SIMPLES_PX then
+    ret(sx - 260 * kx, sy - 760 * ky, sx + 260 * kx, sy - 420 * ky, Cores.placa)   -- longe: so a placa
+    return
+  end
   ret(sx - 20 * kx, sy - 420 * ky, sx + 20 * kx, sy, Cores.poste)
   ret(sx - 260 * kx, sy - 760 * ky, sx + 260 * kx, sy - 420 * ky, Cores.placa)
   local s = o.seta
@@ -64,12 +92,16 @@ end
 
 local function arbusto(o, sx, sy, kx, ky)
   local r = 230 * kx
+  if 2 * r < MINIMO_PX then return end
   ui.circfill(floor(sx), floor(sy - r * 0.7), floor(r), Cores.folha)
+  if 2 * r < SIMPLES_PX then return end
   ui.circfill(floor(sx - r * 0.6), floor(sy - r * 0.4), floor(r * 0.7), Cores.folha_clara)
 end
 
 local function pedra(o, sx, sy, kx, ky)
+  if 280 * ky < MINIMO_PX then return end
   ui.trisfill(sx - 260 * kx, sy, sx + 260 * kx, sy, sx + 60 * kx, sy - 280 * ky, Cores.pedra)
+  if 280 * ky < SIMPLES_PX then return end
   ui.trisfill(sx - 260 * kx, sy, sx + 60 * kx, sy - 280 * ky, sx - 120 * kx, sy - 200 * ky, Cores.cinza)
 end
 

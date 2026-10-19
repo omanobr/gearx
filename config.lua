@@ -14,8 +14,9 @@ C.JOGADOR_Z = C.CAM_ALTURA * C.CAM_PROF   -- distancia entre a camera e o carro
 C.HORIZONTE = 0.45               -- altura do horizonte (fracao da altura da tela)
 
 -- Quantos segmentos desenhar para frente, conforme o numero de jogadores.
--- Menos segmentos = jogo mais leve (importante no console de verdade).
-C.DISTANCIA = { 150, 100, 70 }
+-- Menos segmentos = jogo mais leve. O console executa ~50-60 mil instrucoes Lua por
+-- quadro: confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
+C.DISTANCIA = { 150, 100, 60 }
 
 -- Fisica do carro (por segundo)
 C.VEL_MAX = C.SEG * 60           -- velocidade maxima: 60 segmentos por segundo

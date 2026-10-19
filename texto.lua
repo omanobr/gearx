@@ -33,20 +33,32 @@ local COMPOSTA = {
   [0xD4] = {"O", "circ"}, [0xD5] = {"O", "til"}, [0xDA] = {"U", "agudo"}, [0xC7] = {"C", "cedilha"},
 }
 
--- Pre-calcula os "tracos" horizontais de cada letra (menos chamadas de desenho).
+-- Pre-calcula os retangulos de cada letra: tracos horizontais iguais em linhas seguidas
+-- viram um retangulo so ({linha, coluna inicial, coluna final, altura}). Menos comandos
+-- de desenho: a drawlist do aparelho aceita 18 KB por quadro.
 local function tracos(linhas, deslocamento)
-  local lista = {}
+  local lista, abertos = {}, {}
   for l, bits in ipairs(linhas) do
+    local novos = {}
     local c = 0
     while c < 5 do
       if (bits & (16 >> c)) ~= 0 then
         local ini = c
         while c < 5 and (bits & (16 >> c)) ~= 0 do c = c + 1 end
-        lista[#lista + 1] = { l - 1 + deslocamento, ini, c }
+        local chave = ini * 8 + c
+        local r = abertos[chave]
+        if r then
+          r[4] = r[4] + 1
+        else
+          r = { l - 1 + deslocamento, ini, c, 1 }
+          lista[#lista + 1] = r
+        end
+        novos[chave] = r
       else
         c = c + 1
       end
     end
+    abertos = novos
   end
   return lista
 end
@@ -67,7 +79,7 @@ local function desenhar_glifo(partes, x, y, e, cor)
   for _, lista in ipairs(partes) do
     for _, t in ipairs(lista) do
       local ty = y + t[1] * e
-      ui.rectfill(x + t[2] * e, ty, x + t[3] * e, ty + e, cor)
+      ui.rectfill(x + t[2] * e, ty, x + t[3] * e, ty + t[4] * e, cor)
     end
   end
 end

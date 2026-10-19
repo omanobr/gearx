@@ -12,6 +12,7 @@ local VISAO = {
   x = 0, y = 0, w = C.LARGURA, h = C.ALTURA,
   hy = math.floor(C.ALTURA * C.HORIZONTE), dist = C.DISTANCIA[1],
 }
+local VISOES = { VISAO }
 
 local corrida, pista_atual = nil, nil
 local quadro = 0
@@ -38,6 +39,7 @@ end
 
 function Demo.desenhar()
   if not corrida then Demo.iniciar() end
+  R.fundos(corrida.pista, VISOES, corrida.humanos)
   R.visao(corrida, corrida.humanos[1], VISAO, quadro)
   ui.camera()
   ui.clip()

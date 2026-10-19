@@ -71,7 +71,7 @@
 
 ## Limites do hardware real (issue oficial lupi-org-br/lupinho#12, set/2026)
 
-O simulador ainda NÃO aplica estes limites (PR #24 começou só pela paleta). No aparelho:
+O simulador ainda NÃO aplica estes limites (PR #24 começou só pela paleta); no GearX, `medidor.lua` mede (opção "desempenho"). No aparelho:
 - **Sprite bank de 46 KB**: cada imagem com no máximo ~46 mil pixels (a esteira recusa acima de 46059 bytes).
 - **SD**: no máximo **150 KB** de imagens lidas por quadro e **32** cargas de sprite por quadro.
 - **Lua**: ~**50-60 mil instruções da VM por quadro** (3,6 M/s, perto do Pico-8). Um watchdog fecha o jogo se o loop travar muitos quadros.

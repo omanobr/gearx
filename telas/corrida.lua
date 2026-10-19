@@ -52,6 +52,7 @@ end
 function Tela:desenhar()
   local corrida = self.corrida
   local varios = #corrida.humanos > 1
+  R.fundos(corrida.pista, self.visoes, corrida.humanos)
   for j, carro in ipairs(corrida.humanos) do
     local v = self.visoes[j]
     R.visao(corrida, carro, v, self.quadro)

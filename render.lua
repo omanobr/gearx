@@ -15,8 +15,9 @@ local R = {}
 
 local floor, min, max, log = math.floor, math.min, math.max, math.log
 
--- projecoes guardadas durante a passada da estrada (reaproveitadas a cada quadro)
-local PX1, PY1, PS1, PX2, PY2, PS2, PCLIP, PSEG = {}, {}, {}, {}, {}, {}, {}, {}
+-- projecoes guardadas durante a passada da estrada (reaproveitadas a cada quadro):
+-- ponto de perto de cada segmento (o de longe e o ponto do segmento seguinte)
+local PX1, PY1, PS1, PCLIP, PSEG = {}, {}, {}, {}, {}
 -- carros visiveis nesta visao
 local VIS_N, VIS_C = {}, {}
 
@@ -35,8 +36,12 @@ function R.preparar()
   end
   LARGURA_NIVEL1 = SPR.prata.reto[1].width
   for nome, f in pairs(Arte.fundos) do
-    f.sprites = {}
-    for i, peca in ipairs(f.pecas) do f.sprites[i] = Sprites.img.fundos[peca] end
+    f.sprites, f.inicio = {}, {}
+    local x = 0
+    for i, peca in ipairs(f.pecas) do
+      f.sprites[i], f.inicio[i] = Sprites.img.fundos[peca], x
+      x = x + f.larguras[i]
+    end
     f.cor_ceu, f.cor_mar = Palette.hex(f.ceu), Palette.hex(f.mar)
   end
 end
@@ -78,28 +83,57 @@ local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice)
     local lw1, lw2 = w1 * 2 / C.FAIXAS, w2 * 2 / C.FAIXAS
     local lx1, lx2 = x1 - w1 + lw1, x2 - w2 + lw2
     for _ = 1, C.FAIXAS - 1 do
-      quad(lx1 - l1, y1, lx1 + l1, y1, lx2 + l2, y2, lx2 - l2, y2, cores.faixa)
+      if l1 < 0.8 then
+        ui.line(floor(lx1), y1, floor(lx2), y2, cores.faixa)   -- faixa fininha (longe): uma linha basta
+      else
+        quad(lx1 - l1, y1, lx1 + l1, y1, lx2 + l2, y2, lx2 - l2, y2, cores.faixa)
+      end
       lx1, lx2 = lx1 + lw1, lx2 + lw2
     end
   end
 end
 
--- ceu + panorama (que desliza nas curvas ate o limite da imagem)
-local function fundo(pista, carro, W, H, hy)
-  local f = Arte.fundos[pista.fundo]
-  local margem = max(0, (f.largura - W) / 2)
-  carro.fundo_x = max(-margem, min(margem, carro.fundo_x))
-  local x = floor(-(margem + carro.fundo_x))
-  local y = floor(hy - f.altura + 3)
-  if y > 0 then ui.rectfill(0, 0, W, y, f.cor_ceu) end
-  for i, spr in ipairs(f.sprites) do
-    local lp = f.larguras[i]
-    if x + lp > 0 and x < W then ui.spr(spr, x, y) end
-    x = x + lp
-  end
-  return y + f.altura, f.cor_mar
+-- topo do panorama numa visao com horizonte em hy
+local function topo_fundo(f, hy)
+  return floor(hy - f.altura + 3)
 end
 
+-- Ceu + panorama de todas as visoes (o panorama desliza nas curvas ate o limite da imagem).
+-- Cada pedaco do panorama e desenhado em todas as visoes em seguida: assim o aparelho le a
+-- imagem do cartao uma vez so por quadro (limites de 150 KB e 32 cargas por quadro).
+local FUNDO_X = {}
+function R.fundos(pista, visoes, carros)
+  local f = Arte.fundos[pista.fundo]
+  for j, v in ipairs(visoes) do
+    local carro = carros[j]
+    local margem = max(0, (f.largura - v.w) / 2)
+    carro.fundo_x = max(-margem, min(margem, carro.fundo_x))
+    FUNDO_X[j] = floor(-(margem + carro.fundo_x))
+    local y = topo_fundo(f, v.hy)
+    if y > 0 then
+      ui.clip(v.x, v.y, v.w, v.h)
+      ui.camera(-v.x, -v.y)
+      ui.rectfill(0, 0, v.w, y, f.cor_ceu)
+    end
+  end
+  for i, spr in ipairs(f.sprites) do
+    local lp = f.larguras[i]
+    for j, v in ipairs(visoes) do
+      local x = FUNDO_X[j] + f.inicio[i]
+      if x + lp > 0 and x < v.w then
+        ui.clip(v.x, v.y, v.w, v.h)
+        ui.camera(-v.x, -v.y)
+        ui.spr(spr, x, topo_fundo(f, v.hy))
+      end
+    end
+  end
+end
+
+-- segmentos vizinhos da mesma cor viram um trapezio so enquanto a altura somada for ate esta
+-- (longe, cada segmento tem 1 ou 2 px: juntar economiza muitos comandos de desenho)
+local JUNTAR_PX = 8
+
+-- Desenha a visao de um jogador. Chame R.fundos antes (ceu e panorama de todas as visoes).
 -- v = { x, y, w, h, hy (horizonte), dist (segmentos a desenhar) }
 function R.visao(corrida, carro, v, quadro)
   local pista = corrida.pista
@@ -110,7 +144,8 @@ function R.visao(corrida, carro, v, quadro)
 
   ui.clip(v.x, v.y, W, H)
   ui.camera(-v.x, -v.y)
-  local fim_fundo, cor_mar = fundo(pista, carro, W, H, hy)
+  local f = Arte.fundos[pista.fundo]
+  local fim_fundo = topo_fundo(f, hy) + f.altura
 
   -- camera fica atras do carro
   local cam = carro.z - C.JOGADOR_Z
@@ -122,43 +157,63 @@ function R.visao(corrida, carro, v, quadro)
   local cam_y = ya + (yb - ya) * ((carro.z - ps * SEG) / SEG) + C.CAM_ALTURA
   local cam_x = carro.x * C.ESTRADA
 
-  -- 1) estrada, de perto para longe
+  -- 1) estrada, de perto para longe. Cada ponto da pista e projetado uma vez so: a borda
+  --    de longe de um segmento e a borda de perto do seguinte. O trapezio "aberto" (a*)
+  --    junta segmentos pequenos. (Constantes em variaveis locais: o Lupi executa so
+  --    ~50-60 mil instrucoes Lua por quadro, e este laco roda para cada segmento.)
+  local CAM_PROF, ZEBRA, larg = C.CAM_PROF, C.ZEBRA, C.ESTRADA * hw
   local maxy = H
   local x, dx = 0, -(curvas[base % N + 1] * base_pct)
+  local aberto, escondido = false, false
+  local aX1, aY1, aW1, aX2, aY2, aW2, aClaro, aIdx
+  local z = base * SEG - cam
+  local s1, X1, Y1
+  if z > CAM_PROF then
+    s1 = CAM_PROF / z
+    X1, Y1 = hw + s1 * (x - cam_x) * hw, hy + s1 * (cam_y - alturas[base % N + 1]) * fy
+  end
   for n = 0, v.dist - 1 do
-    local s = base + n
-    local i, i2 = s % N + 1, (s + 1) % N + 1
-    local z1 = s * SEG - cam
+    local i = (base + n) % N + 1
+    local i2 = i == N and 1 or i + 1
     PCLIP[n] = maxy
     PSEG[n] = i
-    if z1 > C.CAM_PROF then
-      local s1, s2 = C.CAM_PROF / z1, C.CAM_PROF / (z1 + SEG)
-      local X1 = hw + s1 * (x - cam_x) * hw
-      local X2 = hw + s2 * (x + dx - cam_x) * hw
-      local Y1 = hy + s1 * (cam_y - alturas[i]) * fy
-      local Y2 = hy + s2 * (cam_y - alturas[i2]) * fy
-      PX1[n], PY1[n], PS1[n] = X1, Y1, s1
-      PX2[n], PY2[n], PS2[n] = X2, Y2, s2
-      local iy1, iy2 = floor(Y1), floor(Y2)
+    local z2 = z + SEG
+    local s2 = CAM_PROF / z2
+    local X2 = hw + s2 * (x + dx - cam_x) * hw
+    local Y2 = hy + s2 * (cam_y - alturas[i2]) * fy
+    PX1[n], PY1[n], PS1[n] = X1, Y1, s1
+    if s1 then
+      local iy1, iy2 = Y1 // 1, Y2 // 1
       if iy2 < maxy and iy2 < iy1 then
-        local W1 = s1 * C.ESTRADA * hw
-        local W2 = s2 * C.ESTRADA * hw
+        local cX1, W1, W2 = X1, s1 * larg, s2 * larg
         if iy1 >= maxy then
           -- parte de baixo escondida atras do morro: corta o trapezio
           local t = (maxy - 1 - Y2) / (Y1 - Y2)
-          X1, W1, iy1 = X2 + (X1 - X2) * t, W2 + (W1 - W2) * t, maxy - 1
+          cX1, W1, iy1 = X2 + (X1 - X2) * t, W2 + (W1 - W2) * t, maxy - 1
         end
-        segmento(W, cores, (floor((s % N) / C.ZEBRA) % 2) == 0, X1, iy1, W1, X2, iy2, W2, i)
+        local claro = ((i - 1) // ZEBRA) % 2 == 0
+        if aberto and claro == aClaro and i > 2 and aIdx > 2 and not escondido and aY1 - iy2 <= JUNTAR_PX then
+          aX2, aY2, aW2 = X2, iy2, W2   -- estica o trapezio aberto ate este segmento
+        else
+          if aberto then segmento(W, cores, aClaro, aX1, aY1, aW1, aX2, aY2, aW2, aIdx) end
+          aberto, aClaro, aIdx = true, claro, i
+          aX1, aY1, aW1, aX2, aY2, aW2 = cX1, iy1, W1, X2, iy2, W2
+        end
+        escondido = false
         maxy = iy2
+      elseif iy2 >= maxy or iy2 > iy1 then
+        escondido = true   -- atras de um morro: o proximo segmento visivel nao emenda neste trapezio
       end
-    else
-      PS1[n] = nil
     end
+    if z2 > CAM_PROF then s1, X1, Y1 = s2, X2, Y2 else s1 = nil end
+    z = z2
     x = x + dx
     dx = dx + curvas[i]
   end
+  PX1[v.dist], PY1[v.dist], PS1[v.dist] = X1, Y1, s1   -- borda de longe do ultimo segmento
+  if aberto then segmento(W, cores, aClaro, aX1, aY1, aW1, aX2, aY2, aW2, aIdx) end
   -- faixa entre o panorama e o ponto mais distante da estrada (mar/horizonte)
-  if maxy > fim_fundo then ui.rectfill(0, fim_fundo, W, maxy, cor_mar) end
+  if maxy > fim_fundo then ui.rectfill(0, fim_fundo, W, maxy, f.cor_mar) end
 
   -- 2) quais carros estao na frente desta camera
   local nv = 0
@@ -180,30 +235,33 @@ function R.visao(corrida, carro, v, quadro)
   -- 3) objetos e carros, de longe para perto
   local vc = 1
   local recorte = H
+  local objetos, noite, larg_carro = pista.objetos, pista.noite, C.CARRO_LARGURA * hw
   for n = v.dist - 1, 1, -1 do
     while vc <= nv and VIS_N[vc] > n do vc = vc + 1 end
     local s1 = PS1[n]
     local tem_carro = vc <= nv and VIS_N[vc] == n
-    local lista = pista.objetos[PSEG[n]]
+    local lista = objetos[PSEG[n]]
     if s1 and (lista or tem_carro) then
-      local clip = PCLIP[n]
+      local px, py = PX1[n], PY1[n]
+      -- so recorta quando a base do segmento ficou atras de um morro (no plano nao precisa)
+      local clip = py > PCLIP[n] + 1 and PCLIP[n] or H
       if clip ~= recorte then
         ui.clip(v.x, v.y, W, max(1, clip))
         recorte = clip
       end
       if lista then
-        local kx, ky = s1 * hw, s1 * fy
+        local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
         for _, o in ipairs(lista) do
-          Objetos.desenhar(o, PX1[n] + s1 * o.x * C.ESTRADA * hw, PY1[n], kx, ky, pista.noite)
+          Objetos.desenhar(o, px + ox * o.x, py, kx, ky, noite)
         end
       end
       while vc <= nv and VIS_N[vc] == n do
         local outro = VIS_C[vc]
         local pct = (outro.z % SEG) / SEG
-        local s = s1 + (PS2[n] - s1) * pct
-        local sx = PX1[n] + (PX2[n] - PX1[n]) * pct + s * outro.x * C.ESTRADA * hw
-        local sy = PY1[n] + (PY2[n] - PY1[n]) * pct
-        local largura = s * C.CARRO_LARGURA * hw
+        local s = s1 + (PS1[n + 1] - s1) * pct
+        local sx = px + (PX1[n + 1] - px) * pct + s * outro.x * larg
+        local sy = py + (PY1[n + 1] - py) * pct
+        local largura = s * larg_carro
         if largura >= 3 then
           local spr = SPR[outro.cor].reto[nivel(largura)]
           ui.spr(spr, floor(sx - spr.width / 2), floor(sy - spr.height))
