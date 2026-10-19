@@ -39,3 +39,10 @@ luac.out
 *.x86_64
 *.hex
 
+
+# GearX
+# saida da construcao (o cartucho .lupi e previas)
+build/
+__pycache__/
+# imagens originais grandes: o lupi-codec juntaria as cores de TODOS os PNGs na paleta
+arte-original/
