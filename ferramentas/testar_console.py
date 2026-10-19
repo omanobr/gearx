@@ -62,8 +62,14 @@ ui.print = function(s, x, y, c)
   numeros(x, y, c)
   if s:find("[\x80-\xFF]") then error("print recebeu letra acentuada: " .. s, 2) end
 end
+-- No console, as imagens de Sprites nao trazem largura/altura (a v0.3 quebrou lendo .width).
+-- Aqui elas sao "opacas": ler qualquer campo de uma imagem da erro.
+local IMAGENS = setmetatable({}, { __mode = "k" })
+local OPACA = { __index = function(_, campo)
+  error("o jogo leu o campo '" .. tostring(campo) .. "' de uma imagem; no console as imagens nao tem esse campo", 2)
+end }
 ui.spr = function(s, x, y)
-  if type(s) ~= "table" or not s.width then error("sprite invalido: " .. tostring(s), 2) end
+  if not IMAGENS[s] then error("sprite invalido: " .. tostring(s), 2) end
   numeros(x, y)
 end
 ui.btn = function(b) return segurados[b] == true end
@@ -88,8 +94,9 @@ package.preload["sprites"] = function()
       local t, partes = Sprites, {}
       for p in caminho:gmatch("[^/]+") do partes[#partes + 1] = p end
       for k = 1, #partes - 1 do t[partes[k]] = t[partes[k]] or {}; t = t[partes[k]] end
-      t[partes[#partes]] = { path = caminho, width = tonumber(json:match('"width":(%d+)')),
-                             height = tonumber(json:match('"height":(%d+)')), ntiles = 1 }
+      local imagem = setmetatable({}, OPACA)
+      IMAGENS[imagem] = true
+      t[partes[#partes]] = imagem
     end
   end
   return Sprites

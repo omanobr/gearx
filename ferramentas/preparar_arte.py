@@ -383,6 +383,14 @@ def main():
         f.write("  },\n  carros = {\n")
         f.write("    cores = { %s },\n" % ", ".join('"%s"' % c for c, _ in CORES_CARROS_LISTA))
         f.write("    niveis = %d,\n" % NIVEIS_CARRO)
+        # tamanho de cada vista e nivel (igual em todas as cores). O jogo le daqui porque,
+        # no console, as imagens de Sprites nao trazem largura e altura.
+        f.write("    tamanho = {\n")
+        for vista in ("reto", "esq", "dir"):
+            tamanhos = sorted((k, img.size) for (c, v, k), img in carros.items()
+                              if v == vista and c == CORES_CARROS_LISTA[0][0])
+            f.write("      %s = { %s },\n" % (vista, ", ".join("[%d] = { %d, %d }" % (k, w, h) for k, (w, h) in tamanhos)))
+        f.write("    },\n")
         f.write("  },\n}\n")
 
     # previa para conferir o resultado

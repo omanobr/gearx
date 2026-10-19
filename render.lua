@@ -22,8 +22,12 @@ local PX1, PY1, PS1, PCLIP, PSEG = {}, {}, {}, {}, {}
 local VIS_N, VIS_C = {}, {}
 
 -- sprites dos carros: SPR[cor].reto[nivel], .esq[nivel], .dir[nivel]
+-- Tamanhos vem de Arte.carros.tamanho (TAM.reto[nivel] = { largura, altura }): no console,
+-- as imagens de Sprites nao trazem largura e altura (so servem para passar ao ui.spr).
 local SPR, LARGURA_NIVEL1 = {}, 1
+local TAM
 function R.preparar()
+  TAM = Arte.carros.tamanho
   for _, cor in ipairs(Arte.carros.cores) do
     local pasta = Sprites.img.carros[cor]
     local t = { reto = {}, esq = {}, dir = {} }
@@ -34,7 +38,7 @@ function R.preparar()
     end
     SPR[cor] = t
   end
-  LARGURA_NIVEL1 = SPR.prata.reto[1].width
+  LARGURA_NIVEL1 = TAM.reto[1][1]
   for nome, f in pairs(Arte.fundos) do
     f.sprites, f.inicio = {}, {}
     local x = 0
@@ -128,6 +132,8 @@ function R.fundos(pista, visoes, carros)
     end
   end
 end
+
+local CHAMAS = { 0.3, 0.7 }   -- posicao das chamas do nitro (fracao da largura do carro)
 
 -- segmentos vizinhos da mesma cor viram um trapezio so enquanto a altura somada for ate esta
 -- (longe, cada segmento tem 1 ou 2 px: juntar economiza muitos comandos de desenho)
@@ -263,8 +269,9 @@ function R.visao(corrida, carro, v, quadro)
         local sy = py + (PY1[n + 1] - py) * pct
         local largura = s * larg_carro
         if largura >= 3 then
-          local spr = SPR[outro.cor].reto[nivel(largura)]
-          ui.spr(spr, floor(sx - spr.width / 2), floor(sy - spr.height))
+          local k = nivel(largura)
+          local tam = TAM.reto[k]
+          ui.spr(SPR[outro.cor].reto[k], floor(sx - tam[1] / 2), floor(sy - tam[2]))
         end
         vc = vc + 1
       end
@@ -275,18 +282,20 @@ function R.visao(corrida, carro, v, quadro)
   -- 4) o carro do jogador
   local k = nivel(C.CARRO_LARGURA / C.CAM_ALTURA * hw)
   local vistas = SPR[carro.cor]
-  local spr = (carro.direcao < 0 and vistas.esq[k]) or (carro.direcao > 0 and vistas.dir[k]) or vistas.reto[k]
+  local vista = "reto"   -- virando so se existir a vista de curva neste tamanho
+  if carro.direcao < 0 and vistas.esq[k] then vista = "esq" elseif carro.direcao > 0 and vistas.dir[k] then vista = "dir" end
+  local spr, sw, sh = vistas[vista][k], TAM[vista][k][1], TAM[vista][k][2]
   local tremor = 0
   if carro.vel > 0 then tremor = (quadro // 3) % 2 end
   if math.abs(carro.x) > 1 and carro.vel > 0 then tremor = tremor + (quadro // 2) % 2 end
-  local bx = floor(hw - spr.width / 2)
+  local bx = floor(hw - sw / 2)
   if carro.batida > 0 then bx = bx + ((quadro % 4 < 2) and -2 or 2) end
-  local by = floor(H - spr.height - 3 - tremor)
+  local by = floor(H - sh - 3 - tremor)
   if carro.nitro_t > 0 then
     local f = 4 + (quadro % 3) * 2
-    local cy = by + floor(spr.height * 0.82)
-    for _, ex in ipairs({ 0.3, 0.7 }) do
-      local fx = bx + floor(spr.width * ex)
+    local cy = by + floor(sh * 0.82)
+    for _, ex in ipairs(CHAMAS) do
+      local fx = bx + floor(sw * ex)
       ui.trisfill(fx - 3, cy, fx + 3, cy, fx, cy + f, Cores.laranja)
       ui.trisfill(fx - 1, cy, fx + 1, cy, fx, cy + f - 2, Cores.amarelo)
     end

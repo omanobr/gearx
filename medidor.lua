@@ -57,7 +57,7 @@ do
     else
       q.drawlist = q.drawlist + 8
       q.cargas = q.cargas + 1
-      q.sd = q.sd + img.width * img.height
+      q.sd = q.sd + (img.width or 0) * (img.height or 0)   -- so o simulador traz largura/altura
       ultima_imagem = img
     end
     return f(img, ...)
