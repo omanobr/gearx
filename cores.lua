@@ -12,7 +12,6 @@ return {
   laranja = hex(0xF07820),
   vermelho = hex(0xE03030),
   verde = hex(0x48D060),
-  azul = hex(0x3870F0),
   painel = hex(0x181828),
 
   -- cor de cada jogador (painel, nomes)

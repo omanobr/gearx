@@ -10,6 +10,5 @@ Arte = {
   carros = {
     cores = { "vermelho", "azul", "amarelo", "prata", "verde", "laranja", "roxo", "ciano" },
     niveis = 17,
-    niveis_com_curva = 6,
   },
 }

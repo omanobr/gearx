@@ -71,7 +71,7 @@ gearx/
 - O jogo é escrito em **Lua**. O console chama a função `update()` **60 vezes por segundo**; nela você lê os controles e desenha tudo de novo.
 - Cores: o jogo inteiro tem **uma paleta de no máximo 256 cores**. Todas as imagens e o código dividem essas cores. Por isso a ferramenta `preparar_arte.py` reduz as cores das suas imagens.
 - Imagens: no máximo **512 x 512** pixels cada.
-- **Memória gráfica:** cada pixel de imagem ocupa 1 byte, e a soma de todas as imagens tem limite (cerca de 768 KB, valor estimado a partir do log do servidor). A construção mostra quanto o jogo usa ("Memória gráfica: 617 KB de ~768 KB") e dá erro se passar. Por isso o título não tem mais uma imagem de tela inteira (130 KB): ele mostra uma corrida de demonstração.
+- **Memória gráfica:** cada pixel de imagem ocupa 1 byte, e a soma de todas as imagens tem limite (cerca de 768 KB, valor estimado a partir do log do servidor). A construção mostra quanto o jogo usa ("Memória gráfica: 564 KB de ~768 KB") e dá erro se passar. Por isso o título não tem mais uma imagem de tela inteira (130 KB): ele mostra uma corrida de demonstração.
 - Documentação oficial: <https://lupi.api.br/docs/>. Os jogos de exemplo da equipe estão em <https://github.com/lupi-org-br>.
 
 ---

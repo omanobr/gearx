@@ -84,7 +84,10 @@ CORES_DE_JOGADOR = {"vermelho", "azul", "amarelo"}   # estes ganham as vistas de
 
 NIVEIS_CARRO = 17          # quantos tamanhos de carro gerar
 FATOR_NIVEL = 0.85         # cada nivel tem 85% da largura do anterior
-NIVEIS_COM_CURVA = 6       # vistas de curva (esq/dir) so nos maiores tamanhos
+# Vistas de curva (esq/dir): so o carro do PROPRIO jogador usa, e so nestes tamanhos:
+# 1 = 1 e 2 jogadores e demonstracao; 5 = 3 jogadores (tela de 240 px). Se mudar
+# CARRO_LARGURA ou CAM_ALTURA em config.lua, confira (render.lua usa a vista reta se faltar).
+NIVEIS_COM_CURVA = (1, 5)
 
 
 # ----------------------------------------------------------------------------
@@ -305,7 +308,7 @@ def preparar_carros():
         for k, largura in enumerate(niveis, start=1):
             fator = largura / largura_base
             for vista, img in pintadas.items():
-                if vista != "reto" and (nome_cor not in CORES_DE_JOGADOR or k > NIVEIS_COM_CURVA):
+                if vista != "reto" and (nome_cor not in CORES_DE_JOGADOR or k not in NIVEIS_COM_CURVA):
                     continue
                 lw = max(2, round(img.size[0] * fator))
                 lh = max(2, round(img.size[1] * fator))
@@ -328,7 +331,7 @@ def main():
     fundos = preparar_fundos()
     carros, niveis = preparar_carros()
 
-    paleta_fundos = MANTER_CORES and cores_existentes("fundos", "titulo")
+    paleta_fundos = MANTER_CORES and cores_existentes("fundos")
     paleta_carros = MANTER_CORES and cores_existentes("carros")
     if paleta_fundos and paleta_carros:
         print("Reaproveitando as cores ja publicadas (fundos: %d, carros: %d) ..." % (len(paleta_fundos), len(paleta_carros)))
@@ -337,7 +340,7 @@ def main():
     paleta_fundos = paleta_fundos or criar_paleta([img for _, img in fundos], CORES_FUNDOS)
     paleta_carros = paleta_carros or criar_paleta([img for (c, v, k), img in carros.items() if k == 1], CORES_CARROS)
 
-    for pasta in ("fundos", "carros", "titulo"):   # "titulo": apaga a imagem antiga da tela de titulo
+    for pasta in ("fundos", "carros"):
         shutil.rmtree(os.path.join(DESTINO_IMG, pasta), ignore_errors=True)
 
     dados_fundos = []
@@ -376,7 +379,6 @@ def main():
         f.write("  },\n  carros = {\n")
         f.write("    cores = { %s },\n" % ", ".join('"%s"' % c for c, _ in CORES_CARROS_LISTA))
         f.write("    niveis = %d,\n" % NIVEIS_CARRO)
-        f.write("    niveis_com_curva = %d,\n" % NIVEIS_COM_CURVA)
         f.write("  },\n}\n")
 
     # previa para conferir o resultado

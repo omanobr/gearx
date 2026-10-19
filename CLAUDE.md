@@ -26,7 +26,7 @@ Referência da API do Lupi e diferenças do simulador: @AGENTS.md
 ## Regras
 
 - **Cores**: sempre `Palette.hex(0xRRGGBB)` (alias local `hex`) com o literal de 6 dígitos dentro de `hex(...)`. O `construir.py` procura esses literais para montar `img/cores.png`, e é assim que a cor entra na paleta oficial. Nunca use índices fixos: a ordem da paleta muda a cada build e no servidor oficial.
-- **Memória gráfica**: a soma de todas as imagens (1 byte por pixel) tem limite no console. O servidor recusou 882 KB ("Capacity check failed ... limite de 46059 bytes da memória gráfica" na última imagem); estimativa ~768 KB em `LIMITE_MEMORIA_GRAFICA` (`construir.py`, falha acima). Hoje: 617 KB (panorâmicas 415 KB com `ALTURA_FUNDO = 110`, carros 217 KB). Nada de imagens de tela inteira; reaproveite o que já existe.
+- **Memória gráfica**: a soma de todas as imagens (1 byte por pixel) tem limite no console. O servidor recusou 882 KB ("Capacity check failed ... limite de 46059 bytes da memória gráfica" na última imagem); estimativa ~768 KB em `LIMITE_MEMORIA_GRAFICA` (`construir.py`, falha acima). Hoje: 564 KB (panorâmicas 415 KB com `ALTURA_FUNDO = 110`, carros 163 KB). Nada de imagens de tela inteira; reaproveite o que já existe.
 - Paleta total hoje: ~229 de 256 (arte ~176). `preparar_arte.py` usa `MANTER_CORES = True`: a arte regenerada só usa cores que já estão em `img/`, porque a paleta do servidor só acumula. Se estourar, baixe `CORES_FUNDOS`/`CORES_CARROS` em `preparar_arte.py` ou reaproveite cores.
 - Lua 5.4: sem recursos exclusivos do 5.5. Nada de alocar tabelas por quadro no caminho quente (`render.lua` usa buffers pré-alocados). O console é um ESP32-S3 a 240 MHz e o desempenho real ainda não foi medido. `C.DISTANCIA` controla o custo.
 - Texto pequeno (`ui.print`) é só ASCII: use `T.p*`, que remove acentos. A fonte grande `T.grande*` aceita acentos e º.
@@ -42,7 +42,7 @@ Referência da API do Lupi e diferenças do simulador: @AGENTS.md
 
 ## Como o render funciona
 
-Segmentos de `C.SEG` unidades. Cada visão projeta `v.dist` segmentos a partir da câmera (`carro.z - C.JOGADOR_Z`), desenha a estrada de perto para longe guardando `maxy` (o que fica abaixo está atrás de um morro), corta trapézios parcialmente escondidos e depois desenha objetos e carros de longe para perto com `ui.clip` na altura guardada de cada segmento. Os carros usam sprites pré-reduzidos em 17 níveis (`reto1..17`, fator 0,85); as vistas `esq/dir` existem só nas cores de jogador, níveis 1 a 6. O panorama desliza com a curva (`carro.fundo_x`), limitado à largura da imagem.
+Segmentos de `C.SEG` unidades. Cada visão projeta `v.dist` segmentos a partir da câmera (`carro.z - C.JOGADOR_Z`), desenha a estrada de perto para longe guardando `maxy` (o que fica abaixo está atrás de um morro), corta trapézios parcialmente escondidos e depois desenha objetos e carros de longe para perto com `ui.clip` na altura guardada de cada segmento. Os carros usam sprites pré-reduzidos em 17 níveis (`reto1..17`, fator 0,85); as vistas `esq/dir` existem só nas cores de jogador e só nos níveis do próprio carro (1 em 1P/2P/demo, 5 em 3P; `NIVEIS_COM_CURVA` em `preparar_arte.py`). O panorama desliza com a curva (`carro.fundo_x`), limitado à largura da imagem.
 
 ## Testar
 
