@@ -3,6 +3,7 @@ local Cores = require "cores"
 local T = require "texto"
 local Entrada = require "entrada"
 local Pistas = require "pistas"
+local Demo = require "demo"
 
 local Tela = {}
 Tela.__index = Tela
@@ -11,6 +12,7 @@ local LINHAS = { "jogadores", "pista", "voltas", "correr" }
 local MEIO_TOM = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }
 
 function Tela.nova()
+  Demo.iniciar(Jogo.opcoes.pista)
   return setmetatable({ sel = 1, t = 0 }, Tela)
 end
 
@@ -30,6 +32,8 @@ function Tela:atualizar()
     elseif linha == "pista" then op.pista = circular(op.pista, d, #Pistas)
     elseif linha == "voltas" then op.voltas = math.max(1, math.min(9, op.voltas + d)) end
   end
+  Demo.iniciar(op.pista)   -- a demonstracao do fundo acompanha a pista escolhida
+  Demo.atualizar()
   if Entrada.confirmar() then
     if linha == "correr" then
       Jogo.ir("corrida", {
@@ -65,11 +69,11 @@ end
 
 function Tela:desenhar()
   local op = Jogo.opcoes
-  ui.spr(Sprites.img.titulo.tela, 0, 0)
+  Demo.desenhar()
   ui.fillp(table.unpack(MEIO_TOM))
   ui.rectfill(0, 0, 480, 270, Cores.preto)
   ui.fillp()
-  ui.rectfill(60, 14, 420, 256, Cores.painel)
+  ui.rectfill(30, 14, 450, 256, Cores.painel)
   T.grande_centro("CORRIDA", 240, 24, 4, Cores.amarelo, Cores.preto)
 
   local nomes = { jogadores = "JOGADORES", pista = "PISTA", voltas = "VOLTAS", correr = "CORRER!" }
@@ -82,10 +86,12 @@ function Tela:desenhar()
       if ativo and (self.t // 15) % 2 == 0 then cor = Cores.branco end
       T.grande_centro(nomes[linha], 240, y, 3, cor, Cores.preto)
     else
-      T.grande(nomes[linha], 80, y, 2, cor)
-      local v = valor(op, linha)
-      if ativo then v = "< " .. v .. " >" end
-      T.grande(v, 220, y, 2, cor)
+      T.grande(nomes[linha], 50, y, 2, cor)
+      T.grande_centro(valor(op, linha), 312, y, 2, cor)
+      if ativo then
+        T.grande("<", 180, y, 2, cor)
+        T.grande(">", 432, y, 2, cor)
+      end
     end
   end
   previa_pista(op, 120, 140, 240, 56)

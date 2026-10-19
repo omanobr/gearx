@@ -7,6 +7,7 @@ local Corrida = require "corrida"
 local R = require "render"
 local Hud = require "hud"
 local Cores = require "cores"
+local Demo = require "demo"
 
 local Tela = {}
 Tela.__index = Tela
@@ -31,6 +32,7 @@ local function visoes(n)
 end
 
 function Tela.nova(opcoes)
+  Demo.parar()   -- libera a memoria da demonstracao antes de montar a corrida
   local self = setmetatable({}, Tela)
   self.opcoes = opcoes
   self.corrida = Corrida.nova(opcoes)

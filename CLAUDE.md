@@ -17,15 +17,17 @@ Referência da API do Lupi e diferenças do simulador: @AGENTS.md
   - `game.lua`: entrada; troca de telas com `Jogo.ir(nome, ...)`; `DEV` vem de `dev_config.lua` (só existe no simulador).
   - `config.lua` (constantes), `pistas.lua` (trechos e objetos de cada pista), `estrada.lua` (monta segmentos),
     `corrida.lua` (física, IA, colisões, voltas, ranking), `render.lua` (pseudo-3D), `objetos.lua` (beira da estrada),
-    `hud.lua`, `texto.lua` (fonte grande própria + `ui.print`), `entrada.lua`, `cores.lua`, `telas/*.lua`.
+    `hud.lua`, `texto.lua` (fonte grande própria + `ui.print`), `entrada.lua`, `cores.lua`, `telas/*.lua`,
+    `demo.lua` (corrida automática de fundo do título/menu/resultado; `Demo.parar()` ao entrar numa corrida).
 - `ferramentas/`, `build/` e `arte-original/` ficam fora do cartucho (`FORA_DO_CARTUCHO` em `construir.py`).
-- Arquivos **gerados** (não editar à mão): `img/fundos|carros|titulo/*`, `img/cores.png`, `dados_arte.lua`, `build/*`.
+- Arquivos **gerados** (não editar à mão): `img/fundos|carros/*`, `img/cores.png`, `dados_arte.lua`, `build/*`.
 - `ferramentas/construir.py` replica o `lupi-codec` oficial (validado: saída idêntica pixel a pixel e mesma paleta).
 
 ## Regras
 
 - **Cores**: sempre `Palette.hex(0xRRGGBB)` (alias local `hex`) com o literal de 6 dígitos dentro de `hex(...)`. O `construir.py` procura esses literais para montar `img/cores.png`, e é assim que a cor entra na paleta oficial. Nunca use índices fixos: a ordem da paleta muda a cada build e no servidor oficial.
-- Paleta total hoje: ~229 de 256 (arte ~176). Se estourar, baixe `CORES_FUNDOS`/`CORES_CARROS` em `preparar_arte.py` ou reaproveite cores.
+- **Memória gráfica**: a soma de todas as imagens (1 byte por pixel) tem limite no console. O servidor recusou 882 KB ("Capacity check failed ... limite de 46059 bytes da memória gráfica" na última imagem); estimativa ~768 KB em `LIMITE_MEMORIA_GRAFICA` (`construir.py`, falha acima). Hoje: 617 KB (panorâmicas 415 KB com `ALTURA_FUNDO = 110`, carros 217 KB). Nada de imagens de tela inteira; reaproveite o que já existe.
+- Paleta total hoje: ~229 de 256 (arte ~176). `preparar_arte.py` usa `MANTER_CORES = True`: a arte regenerada só usa cores que já estão em `img/`, porque a paleta do servidor só acumula. Se estourar, baixe `CORES_FUNDOS`/`CORES_CARROS` em `preparar_arte.py` ou reaproveite cores.
 - Lua 5.4: sem recursos exclusivos do 5.5. Nada de alocar tabelas por quadro no caminho quente (`render.lua` usa buffers pré-alocados). O console é um ESP32-S3 a 240 MHz e o desempenho real ainda não foi medido. `C.DISTANCIA` controla o custo.
 - Texto pequeno (`ui.print`) é só ASCII: use `T.p*`, que remove acentos. A fonte grande `T.grande*` aceita acentos e º.
 - Use os nomes dos botões (`BTN_Z`...), nunca os números. `sfx`/`ui.stat` podem não existir: proteja com `if`.

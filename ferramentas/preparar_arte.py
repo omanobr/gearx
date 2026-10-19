@@ -7,11 +7,14 @@ imagens pequenas, com poucas cores, no formato que o Lupi aceita.
 O que ele faz:
   - FUNDOS: recorta cada panoramica numa faixa larga (ceu + montanhas + cidade + mar)
     e divide em pedacos de no maximo 512 px de largura (limite do Lupi).
-  - TITULO: reduz a imagem da rodovia para a tela de 480x270.
   - CARROS: recorta os 3 carros (reto, virando para a esquerda e para a direita),
     pinta em varias cores e gera varios tamanhos (para o carro "diminuir" ao longe).
   - PALETA: todas as imagens do jogo dividem uma paleta de no maximo 256 cores.
-    O script escolhe as melhores cores para caber nesse limite.
+    O script escolhe as melhores cores para caber nesse limite (ou reaproveita as
+    cores ja publicadas: veja MANTER_CORES).
+  - MEMORIA: cada pixel ocupa 1 byte da memoria grafica do console, que e limitada
+    (veja LIMITE_MEMORIA_GRAFICA em construir.py). Por isso nao ha mais imagem de
+    tela de titulo: o titulo mostra uma corrida de demonstracao.
 
 Rode de novo sempre que mudar algo em arte-original/ ou nas configuracoes abaixo:
     python ferramentas/preparar_arte.py
@@ -39,11 +42,18 @@ PREVIA = os.path.join(RAIZ, "build", "previa_arte.png")
 # ----------------------------------------------------------------------------
 
 # Quantas cores cada grupo pode usar (o resto da paleta fica para as cores do codigo).
-CORES_FUNDOS = 118   # fundos + tela de titulo
+CORES_FUNDOS = 118
 CORES_CARROS = 92
 
-# Altura da faixa de fundo no jogo (em pixels da tela do Lupi).
-ALTURA_FUNDO = 125
+# O servidor do Lupi so ACUMULA cores na paleta entre uma versao e outra: uma cor que
+# sai do jogo continua ocupando lugar. Com MANTER_CORES ligado, a arte nova reaproveita
+# as cores das imagens que ja estao em img/ (nenhuma cor nova entra na paleta).
+# Desligue (False) so se for trocar a arte por outra bem diferente.
+MANTER_CORES = True
+
+# Altura da faixa de fundo no jogo (em pixels da tela do Lupi). Cada panoramica ocupa
+# cerca de largura x altura bytes de memoria grafica: 125 deixava as 5 com 536 KB.
+ALTURA_FUNDO = 110
 
 # Fundos: nome usado no codigo, arquivo, e recorte (x0, y0, x1, y1) na imagem original.
 # A borda de baixo do recorte fica um pouco abaixo da linha do mar.
@@ -54,8 +64,6 @@ FUNDOS = [
     ("crepusculo", "Panorama Costeiro em Dia e Noite.png",  (0, 369, 2172, 648)),
     ("lua_cheia",  "Cidade Costeira sob a Lua Cheia.png",   (0, 185, 2172, 515)),
 ]
-
-TITULO = ("Rodovia Costeira em Pixel Art ao Entardecer.png", 480, 270)
 
 ARQUIVO_CARROS = "Sprites de Carro Esportivo em Pixel Art.png"
 GRADE_CARROS = 5            # a arte dos carros foi desenhada em blocos de 5x5 pixels
@@ -115,6 +123,18 @@ def criar_paleta(imagens, n_cores):
     return cores
 
 
+def cores_existentes(*pastas):
+    """Cores ja usadas pelas imagens geradas antes (para MANTER_CORES)."""
+    cores = set()
+    for pasta in pastas:
+        for atual, _, nomes in os.walk(os.path.join(DESTINO_IMG, pasta)):
+            for nome in nomes:
+                if nome.endswith(".png"):
+                    img = Image.open(os.path.join(atual, nome)).convert("RGBA")
+                    cores.update(p[:3] for p in pixels_de(img) if p[3] >= 128)
+    return sorted(cores)
+
+
 def aplicar_paleta(img, cores):
     """Troca cada pixel pela cor mais proxima da paleta. Transparente continua transparente."""
     plana = []
@@ -156,7 +176,7 @@ def mais_proxima(c, cores):
 
 
 # ----------------------------------------------------------------------------
-# Fundos e titulo
+# Fundos
 # ----------------------------------------------------------------------------
 
 def preparar_fundos():
@@ -166,13 +186,7 @@ def preparar_fundos():
         escala = ALTURA_FUNDO / img.size[1]
         largura = round(img.size[0] * escala)
         fundos.append((nome, reduzir(img, largura, ALTURA_FUNDO)))
-    arquivo, lt, at = TITULO
-    img = Image.open(os.path.join(ORIGEM, arquivo)).convert("RGBA")
-    alt = round(img.size[1] * lt / img.size[0])
-    img = reduzir(img, lt, alt)
-    topo = (alt - at) // 2
-    titulo = img.crop((0, topo, lt, topo + at))
-    return fundos, titulo
+    return fundos
 
 
 # ----------------------------------------------------------------------------
@@ -311,14 +325,19 @@ def salvar(img, *partes):
 
 def main():
     print("Lendo arte-original/ ...")
-    fundos, titulo = preparar_fundos()
+    fundos = preparar_fundos()
     carros, niveis = preparar_carros()
 
-    print("Escolhendo cores (fundos: %d, carros: %d) ..." % (CORES_FUNDOS, CORES_CARROS))
-    paleta_fundos = criar_paleta([img for _, img in fundos] + [titulo], CORES_FUNDOS)
-    paleta_carros = criar_paleta([img for (c, v, k), img in carros.items() if k == 1], CORES_CARROS)
+    paleta_fundos = MANTER_CORES and cores_existentes("fundos", "titulo")
+    paleta_carros = MANTER_CORES and cores_existentes("carros")
+    if paleta_fundos and paleta_carros:
+        print("Reaproveitando as cores ja publicadas (fundos: %d, carros: %d) ..." % (len(paleta_fundos), len(paleta_carros)))
+    else:
+        print("Escolhendo cores (fundos: %d, carros: %d) ..." % (CORES_FUNDOS, CORES_CARROS))
+    paleta_fundos = paleta_fundos or criar_paleta([img for _, img in fundos], CORES_FUNDOS)
+    paleta_carros = paleta_carros or criar_paleta([img for (c, v, k), img in carros.items() if k == 1], CORES_CARROS)
 
-    for pasta in ("fundos", "carros", "titulo"):
+    for pasta in ("fundos", "carros", "titulo"):   # "titulo": apaga a imagem antiga da tela de titulo
         shutil.rmtree(os.path.join(DESTINO_IMG, pasta), ignore_errors=True)
 
     dados_fundos = []
@@ -339,9 +358,6 @@ def main():
         mar = mais_proxima(cor_media(img, range(ALTURA_FUNDO - 3, ALTURA_FUNDO)), cores_img)
         dados_fundos.append((nome, pecas, larguras, largura, ceu, mar))
         previa.append(img)
-    titulo = aplicar_paleta(titulo, paleta_fundos)
-    salvar(titulo, "titulo", "tela.png")
-    previa.append(titulo)
 
     linha_carros = []
     for (cor, vista, k), img in sorted(carros.items()):
@@ -377,7 +393,7 @@ def main():
     folha.save(PREVIA)
 
     total = len(set(paleta_fundos) | set(paleta_carros))
-    print("Pronto! %d fundos, 1 titulo, %d imagens de carro." % (len(fundos), len(carros)))
+    print("Pronto! %d fundos e %d imagens de carro." % (len(fundos), len(carros)))
     print("Cores usadas pela arte: %d (sobram ~%d para as cores do codigo)." % (total, 255 - total))
     print("Previa em: %s" % os.path.relpath(PREVIA, RAIZ))
 

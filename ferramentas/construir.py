@@ -36,6 +36,10 @@ PASTA_BUILD = os.path.join(RAIZ, "build")
 SAIDA_DESCOMPACTADA = os.path.join(PASTA_BUILD, "jogo")
 
 LIMITE_CORES = 256
+# Memoria grafica do console: cada imagem ocupa largura x altura bytes, e a soma de todas
+# tem um limite. O servidor do Lupi recusou o jogo com 882 KB de imagens; pelo log, o limite
+# fica perto de 780 KB. Valor ESTIMADO: confirme com a equipe do Lupi e ajuste aqui.
+LIMITE_MEMORIA_GRAFICA = 768 * 1024
 LIMITE_LADO = 512
 COR_MAGICA_TILES = 8456  # BGR555 que o codec usa para detectar sprite sheets (pixel 0,0)
 ARQUIVOS_SO_DE_DESENVOLVIMENTO = {"dev_config.lua"}
@@ -217,6 +221,7 @@ def construir(silencioso=False):
     os.makedirs(SAIDA_DESCOMPACTADA)
 
     paleta = Paleta()
+    memoria = 0
     itens = []  # (caminho_no_cartucho, tamanho, metadados)
     for rel in listar_arquivos(PASTA_JOGO, FORA_DO_CARTUCHO):
         origem = os.path.join(PASTA_JOGO, rel)
@@ -226,6 +231,7 @@ def construir(silencioso=False):
             if resultado is None:
                 continue
             dados, meta = resultado
+            memoria += len(dados)
             destino_rel = rel[:-4]
             destino = os.path.join(SAIDA_DESCOMPACTADA, destino_rel)
             os.makedirs(os.path.dirname(destino), exist_ok=True)
@@ -244,6 +250,11 @@ def construir(silencioso=False):
         erros.append("A paleta do jogo ficou com %d cores; o Lupi aceita no maximo %d. "
                      "Rode ferramentas/preparar_arte.py com menos cores ou use menos cores no codigo."
                      % (len(paleta.cores), LIMITE_CORES))
+
+    if memoria > LIMITE_MEMORIA_GRAFICA:
+        erros.append("As imagens ocupam %d KB de memoria grafica; o console aceita cerca de %d KB. "
+                     "Diminua imagens grandes (por exemplo ALTURA_FUNDO em preparar_arte.py)."
+                     % (memoria // 1024, LIMITE_MEMORIA_GRAFICA // 1024))
 
     texto_paleta = gerar_palette_lua(paleta)
     with open(os.path.join(SAIDA_DESCOMPACTADA, "palette.lua"), "w", encoding="utf-8", newline="\n") as f:
@@ -273,6 +284,7 @@ def construir(silencioso=False):
         "avisos": avisos,
         "cores": len(paleta.cores),
         "cores_codigo": cores_codigo,
+        "memoria_kb": memoria // 1024,
         "arquivos": listar_arquivos(SAIDA_DESCOMPACTADA),
         "lupi": os.path.relpath(caminho_lupi, RAIZ).replace("\\", "/"),
         "tamanho_kb": round(os.path.getsize(caminho_lupi) / 1024),
@@ -290,6 +302,7 @@ def imprimir_relatorio(r):
         print("AVISO:", a)
     if "cores" in r:
         print("Paleta: %d de %d cores (%d usadas pelo codigo)" % (r["cores"], LIMITE_CORES, r["cores_codigo"]))
+        print("Memoria grafica: %d KB de ~%d KB (estimado)" % (r["memoria_kb"], LIMITE_MEMORIA_GRAFICA // 1024))
         print("Cartucho: %s (%d KB, %d arquivos) em %.2fs" % (r["lupi"], r["tamanho_kb"], len(r["arquivos"]), r["segundos"]))
     print("OK!" if r["ok"] else "FALHOU.")
 
