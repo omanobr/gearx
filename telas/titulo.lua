@@ -27,7 +27,7 @@ function Tela:desenhar()
   if (self.t // 30) % 2 == 0 then
     T.grande_centro("APERTE Z", 240, 176, 3, Cores.branco, Cores.preto)
   end
-  T.p("v0.2", 6, 258, Cores.cinza, Cores.preto)
+  T.p("v0.3", 6, 258, Cores.cinza, Cores.preto)
 end
 
 return Tela

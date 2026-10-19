@@ -1,7 +1,37 @@
 -- Texto. Duas opcoes:
 --   T.p(...)       texto pequeno, com a fonte do Lupi (5x8, so letras sem acento)
 --   T.grande(...)  texto grande desenhado com retangulos, aceita acentos e escala
+--
+-- Acentos: o console guarda o texto em Latin-9 (1 byte por letra) e nao tem a biblioteca
+-- utf8 completa; o simulador e os editores usam UTF-8 (2 bytes por letra acentuada).
+-- Este arquivo entende os dois jeitos sozinho, sem usar utf8.* (que quebra no console),
+-- e o proprio codigo deste arquivo so tem caracteres ASCII.
 local T = {}
+
+local byte, char = string.byte, string.char
+
+-- Le a letra que comeca na posicao i de s. Devolve o codigo dela (Latin-1/Latin-9,
+-- iguais para as letras do portugues) e a posicao da letra seguinte.
+local function codigo(s, i)
+  local b = byte(s, i)
+  if b == 0xC2 or b == 0xC3 then          -- UTF-8 de 2 bytes (simulador, editores)
+    local b2 = byte(s, i + 1)
+    if b2 and b2 >= 0x80 and b2 <= 0xBF then return (b - 0xC2) * 64 + b2, i + 2 end
+  end
+  return b, i + 1                          -- ASCII ou Latin-9 (console)
+end
+
+-- quantas letras tem o texto (nos dois jeitos)
+local function letras(s)
+  if not s:find("[\x80-\xFF]") then return #s end
+  local n, i = 0, 1
+  while i <= #s do
+    local _
+    _, i = codigo(s, i)
+    n = n + 1
+  end
+  return n
+end
 
 -- Fonte grande: cada letra tem 7 linhas de 5 pixels (bit 16 = pixel da esquerda).
 local FONTE = {
@@ -21,8 +51,8 @@ local FONTE = {
   ["!"] = {4, 4, 4, 4, 4, 0, 4}, ["?"] = {14, 17, 1, 2, 4, 0, 4}, ["."] = {0, 0, 0, 0, 0, 12, 12},
   [","] = {0, 0, 0, 0, 12, 4, 8}, [":"] = {0, 12, 12, 0, 12, 12, 0}, ["-"] = {0, 0, 0, 31, 0, 0, 0},
   ["/"] = {1, 1, 2, 4, 8, 16, 16}, ["'"] = {4, 4, 8, 0, 0, 0, 0}, ["<"] = {2, 4, 8, 16, 8, 4, 2},
-  [">"] = {8, 4, 2, 1, 2, 4, 8}, ["+"] = {0, 4, 4, 31, 4, 4, 0}, ["º"] = {14, 10, 14, 0, 14, 0, 0},
-  [" "] = {0, 0, 0, 0, 0, 0, 0},
+  [">"] = {8, 4, 2, 1, 2, 4, 8}, ["+"] = {0, 4, 4, 31, 4, 4, 0}, [" "] = {0, 0, 0, 0, 0, 0, 0},
+  [0xBA] = {14, 10, 14, 0, 14, 0, 0},   -- o "numero ordinal" (1o, 2o...), pelo codigo
 }
 
 -- Acentos: duas linhas desenhadas acima da letra (cedilha: abaixo).
@@ -64,7 +94,9 @@ local function tracos(linhas, deslocamento)
 end
 
 local GLIFOS = {}
-for ch, linhas in pairs(FONTE) do GLIFOS[utf8.codepoint(ch)] = { tracos(linhas, 0) } end
+for ch, linhas in pairs(FONTE) do
+  GLIFOS[type(ch) == "number" and ch or byte(ch)] = { tracos(linhas, 0) }
+end
 for cp, def in pairs(COMPOSTA) do
   local abaixo = def[2] == "cedilha"
   GLIFOS[cp] = { tracos(FONTE[def[1]], 0), tracos(ACENTO[def[2]], abaixo and 7 or -2) }
@@ -85,7 +117,7 @@ local function desenhar_glifo(partes, x, y, e, cor)
 end
 
 function T.largura(s, e)
-  return math.max(0, utf8.len(s) * 6 * e - e)
+  return math.max(0, letras(s) * 6 * e - e)
 end
 
 -- Texto grande. e = escala (tamanho do "pixel" da letra). sombra = cor da sombra (opcional).
@@ -93,7 +125,10 @@ function T.grande(s, x, y, e, cor, sombra)
   x, y = math.floor(x), math.floor(y)
   local cx = x
   local d = math.max(1, e // 3)
-  for _, cp in utf8.codes(s) do
+  local i, n = 1, #s
+  while i <= n do
+    local cp
+    cp, i = codigo(s, i)
     local g = GLIFOS[maiuscula(cp)]
     if g then
       if sombra then desenhar_glifo(g, cx + d, y + d, e, sombra) end
@@ -107,16 +142,31 @@ function T.grande_centro(s, cx, y, e, cor, sombra)
   T.grande(s, cx - T.largura(s, e) / 2, y, e, cor, sombra)
 end
 
--- Texto pequeno (fonte do Lupi). Tira acentos, que a fonte do console nao tem.
-local SEM_ACENTO = {
-  ["á"] = "a", ["à"] = "a", ["â"] = "a", ["ã"] = "a", ["é"] = "e", ["ê"] = "e", ["í"] = "i",
-  ["ó"] = "o", ["ô"] = "o", ["õ"] = "o", ["ú"] = "u", ["ç"] = "c", ["Á"] = "A", ["À"] = "A",
-  ["Â"] = "A", ["Ã"] = "A", ["É"] = "E", ["Ê"] = "E", ["Í"] = "I", ["Ó"] = "O", ["Ô"] = "O",
-  ["Õ"] = "O", ["Ú"] = "U", ["Ç"] = "C", ["º"] = "o",
-}
+-- Texto pequeno (fonte do Lupi). Tira acentos, que a fonte do simulador nao tem.
+-- SEM_ACENTO[codigo da letra acentuada] = letra sem acento
+local SEM_ACENTO = {}
+for letra, codigos in pairs({
+  a = { 0xE0, 0xE1, 0xE2, 0xE3 }, e = { 0xE9, 0xEA }, i = { 0xED }, o = { 0xF3, 0xF4, 0xF5, 0xBA },
+  u = { 0xFA }, c = { 0xE7 }, A = { 0xC0, 0xC1, 0xC2, 0xC3 }, E = { 0xC9, 0xCA }, I = { 0xCD },
+  O = { 0xD3, 0xD4, 0xD5 }, U = { 0xDA }, C = { 0xC7 },
+}) do
+  for _, cp in ipairs(codigos) do SEM_ACENTO[cp] = letra end
+end
 
+local ja_convertidos = {}   -- os textos com acento se repetem a cada quadro: guarda o resultado
 function T.sem_acento(s)
-  return (s:gsub("[\xC2\xC3][\x80-\xBF]", SEM_ACENTO))
+  if not s:find("[\x80-\xFF]") then return s end
+  local pronto = ja_convertidos[s]
+  if pronto then return pronto end
+  local partes, i, n = {}, 1, #s
+  while i <= n do
+    local cp
+    cp, i = codigo(s, i)
+    partes[#partes + 1] = cp < 0x80 and char(cp) or (SEM_ACENTO[cp] or "?")
+  end
+  pronto = table.concat(partes)
+  ja_convertidos[s] = pronto
+  return pronto
 end
 
 function T.p(s, x, y, cor, sombra)
@@ -126,11 +176,11 @@ function T.p(s, x, y, cor, sombra)
 end
 
 function T.p_centro(s, cx, y, cor, sombra)
-  T.p(s, cx - (utf8.len(T.sem_acento(s)) * 6 - 1) / 2, y, cor, sombra)
+  T.p(s, cx - (#T.sem_acento(s) * 6 - 1) / 2, y, cor, sombra)
 end
 
 function T.p_direita(s, xd, y, cor, sombra)
-  T.p(s, xd - (utf8.len(T.sem_acento(s)) * 6 - 1), y, cor, sombra)
+  T.p(s, xd - (#T.sem_acento(s) * 6 - 1), y, cor, sombra)
 end
 
 function T.tempo(quadros)

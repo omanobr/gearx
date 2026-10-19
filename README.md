@@ -114,6 +114,7 @@ Para uma pista nova, copie um bloco `{ nome = ..., fundo = ..., trechos = {...},
 
 - **Desempenho no console real:** o simulador roda no PC, que é muito mais rápido que o Lupi (um ESP32-S3 a 240 MHz). Ainda não sabemos se o modo de 3 jogadores roda a 60 quadros por segundo no aparelho. Se ficar lento, o primeiro ajuste é diminuir `C.DISTANCIA` em `config.lua` (quantos segmentos de estrada são desenhados à frente).
 - **Som:** ainda não tem. O simulador atual não implementa `sfx`, então o som só daria para testar no aparelho.
+- **Acentos:** o console guarda o texto do jogo em Latin-9, e o simulador em UTF-8. O arquivo `texto.lua` entende os dois, então pode escrever com acento normalmente nos textos. A construção avisa se algo não vai funcionar no console.
 - **Cores RGB x BGR:** a documentação fala em RGB555, mas o simulador e o `lupi-codec` oficial usam BGR555 (vermelho e azul trocados). O jogo nunca escreve números de cor direto: usa sempre `Palette.hex(...)`, que funciona nos dois casos.
 
 ---

@@ -183,6 +183,27 @@ def codificar_png(caminho, rel, paleta, erros):
     return bytes(saida), meta
 
 
+REGEX_UTF8_LIB = re.compile(r"\butf8\s*\.")
+
+
+def conferir_texto_lua(caminho, rel, erros):
+    """O console guarda os .lua em Latin-9 (1 byte por letra) e nao tem a biblioteca utf8
+    completa: utf8.* quebra la ("invalid UTF-8 code"). As letras acentuadas sao tratadas em
+    texto.lua, que entende os dois jeitos."""
+    with open(caminho, encoding="utf-8") as f:
+        linhas = f.read().split("\n")
+    for n, linha in enumerate(linhas, start=1):
+        codigo = linha.split("--", 1)[0]
+        if REGEX_UTF8_LIB.search(codigo):
+            erros.append("%s:%d usa utf8.*, que quebra no console (texto em Latin-9). "
+                         "Use as funcoes de texto.lua." % (rel, n))
+        try:
+            linha.encode("iso-8859-15")
+        except UnicodeEncodeError as e:
+            erros.append("%s:%d tem o caractere '%s', que nao existe no Latin-9 do console."
+                         % (rel, n, linha[e.start]))
+
+
 def gerar_palette_lua(paleta):
     linhas = ["-- Gerado automaticamente por ferramentas/construir.py. Nao edite.", "Palette = {"]
     for i, cor in enumerate(paleta.cores):
@@ -248,6 +269,7 @@ def construir(silencioso=False):
         elif rel.endswith(".lua"):
             if nome == "palette.lua" or nome in ARQUIVOS_SO_DE_DESENVOLVIMENTO:
                 continue
+            conferir_texto_lua(origem, rel, erros)
             destino = os.path.join(SAIDA_DESCOMPACTADA, rel)
             os.makedirs(os.path.dirname(destino), exist_ok=True)
             shutil.copyfile(origem, destino)

@@ -96,6 +96,7 @@ Custo de cada comando na drawlist:
 ## Diferenças encontradas no simulador Lupinho (lupi-org-br/lupinho, out/2026)
 
 - Lua 5.5 no simulador; o console usa **Lua 5.4**. Escreva código compatível com 5.4.
+- No console os arquivos `.lua` ficam em **Latin-9** (o simulador lê UTF-8) e a biblioteca `utf8` não funciona com eles ("invalid UTF-8 code"). Trate letras acentuadas byte a byte (veja `texto.lua`).
 - `update(frame)`: `frame` chega como número decimal (`63.0`). Use contadores próprios.
 - Cores: `ui.palset` interpreta o valor como **BGR555** (vermelho nos bits baixos), igual ao `lupi-codec`.
   A documentação diz RGB555. Use sempre `Palette.hex(0xRRGGBB)` e nunca números de cor fixos.

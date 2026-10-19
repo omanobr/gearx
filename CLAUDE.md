@@ -9,6 +9,7 @@ Referência da API do Lupi e diferenças do simulador: @AGENTS.md
 - `python ferramentas/servidor.py` (ou `INICIAR.bat`): constrói, serve o simulador em http://localhost:8000 e reconstrói quando um arquivo do jogo é salvo. A página recarrega o jogo sozinha.
 - `python ferramentas/construir.py`: só constrói (`build/jogo/` descompactado + `build/gearx.lupi`). Sai com erro se a paleta passar de 256 cores.
 - `python ferramentas/preparar_arte.py` (ou `PREPARAR_ARTE.bat`): regenera `img/{fundos,carros,titulo}` e `dados_arte.lua` a partir de `arte-original/`. Prévia em `build/previa_arte.png`.
+- `python ferramentas/testar_console.py`: roda o jogo como o console (Lua 5.4 e `.lua` em Latin-9), sem tela, com `ui.*` de mentira que conferem argumentos: título/menu/corrida e corridas inteiras em 1-3 jogadores, e mede instruções Lua 5.4 por quadro. Usa `lua5.4` local ou Docker. Rode antes de publicar mudanças grandes.
 - Dependência: Python 3 + Pillow. O simulador (`ferramentas/simulador/game.js|wasm`) é o Lupinho compilado (MIT) e não precisa de Emscripten.
 
 ## Estrutura
@@ -30,8 +31,8 @@ Referência da API do Lupi e diferenças do simulador: @AGENTS.md
   - cada imagem linear até **46059 bytes** (largura x altura): a esteira online recusa a build acima disso (`LIMITE_BYTES_IMAGEM` em `construir.py`, que também falha). Panorâmicas são cortadas em pedaços de até `46059 // ALTURA_FUNDO` px. Nada de imagens de tela inteira.
   - por quadro: até **150 KB** de imagens lidas do SD, até **32** cargas de sprite, drawlist até **18 KB** (comandos além disso são ignorados) e **~50-60 mil instruções Lua** (watchdog fecha o jogo se travar). O simulador não aplica esses limites: `medidor.lua` (opção "desempenho" do Modo de teste) conta instruções (`debug.sethook`), bytes de drawlist e cargas/KB de imagem por quadro e mostra média/pico. Medido em out/2026, picos: 1P 38k instr/10 KB/10 cargas/94 KB; 2P 47k/12 KB/18/110 KB; 3P 52-55k/15-16 KB/26/101 KB (pista 5 à noite é a mais pesada). Meça de novo depois de mexer em render, objetos, HUD ou `C.DISTANCIA`.
 - Paleta total hoje: ~229 de 256 (arte ~176). `preparar_arte.py` usa `MANTER_CORES = True`: a arte regenerada só usa cores que já estão em `img/`, porque a paleta do servidor só acumula. Se estourar, baixe `CORES_FUNDOS`/`CORES_CARROS` em `preparar_arte.py` ou reaproveite cores.
-- Lua 5.4: sem recursos exclusivos do 5.5. Nada de alocar tabelas por quadro no caminho quente (`render.lua` usa buffers pré-alocados). O console é um ESP32-S3 a 240 MHz e o desempenho real ainda não foi medido. `C.DISTANCIA` controla o custo.
-- Texto pequeno (`ui.print`) é só ASCII: use `T.p*`, que remove acentos. A fonte grande `T.grande*` aceita acentos e º.
+- Lua 5.4: sem recursos exclusivos do 5.5. Nada de alocar tabelas por quadro no caminho quente (`render.lua` usa buffers pré-alocados). O console é um ESP32-S3 a 240 MHz. `C.DISTANCIA` controla o custo.
+- **Texto e acentos**: o console guarda os `.lua` em **Latin-9** (1 byte por letra) e a biblioteca `utf8` de lá não serve (a v0.2 quebrou com `texto.lua:67 invalid UTF-8 code`). Nunca use `utf8.*`; `texto.lua` decodifica UTF-8 e Latin-9 sozinho e é só ASCII. `construir.py` falha com `utf8.*` ou caractere fora do Latin-9. Texto pequeno (`ui.print`) é só ASCII: use `T.p*`, que remove acentos. A fonte grande `T.grande*` aceita acentos e º.
 - Use os nomes dos botões (`BTN_Z`...), nunca os números. `sfx`/`ui.stat` podem não existir: proteja com `if`.
 - Imagens: até 512x512, alfa só 0 ou 255. Evite preto puro (vira transparente) e a cor (66,66,66) no pixel (0,0), que o codec trata como sprite sheet.
 
