@@ -18,7 +18,7 @@ Comece pelo arquivo `game.lua`, função `update`. Na pasta `img` estão os grá
 **Teclado no simulador:**
 
 | Tecla | Botão do Lupi | Controle (estilo SNES) | No jogo |
-|---|---|---|
+|---|---|---|---|
 | `W` `A` `S` `D` | Direcional | Direcional | `A`/`D` vira, `W` também acelera, `S` também freia |
 | `K` | Z | B | Acelerar / confirmar |
 | `J` | X | A | Frear / voltar |
