@@ -28,7 +28,25 @@ local VIS_N, VIS_C = {}, {}
 -- as imagens de Sprites nao trazem largura e altura (so servem para passar ao ui.spr).
 local SPR, LARGURA_NIVEL1 = {}, 1
 local TAM
+local CHAMA = { g = {}, p = {} }   -- chamas do nitro (ferramentas/gerar_efeitos.py)
+local SEPARADOR
+
+-- Desenha uma imagem. Se for a mesma da ultima, poe antes o "separador" (1 pixel
+-- transparente): no console, a mesma imagem duas vezes seguidas travou o jogo.
+-- Todo desenho de imagem do jogo passa por aqui.
+local ultima_img
+function R.spr(img, x, y)
+  if img == ultima_img then ui.spr(SEPARADOR, 0, 0) end
+  ui.spr(img, x, y)
+  ultima_img = img
+end
+function R.novo_quadro() ultima_img = nil end
+
 function R.preparar()
+  SEPARADOR = Sprites.img.efeitos.separador
+  for tam, lista in pairs(CHAMA) do
+    for q = 1, Efeitos.quadros_chama do lista[q] = Sprites.img.efeitos["chama_" .. tam .. q] end
+  end
   TAM = Arte.carros.tamanho
   for _, cor in ipairs(Arte.carros.cores) do
     local pasta = Sprites.img.carros[cor]
@@ -115,9 +133,9 @@ local function topo_fundo(f, hy)
   return floor(hy - f.altura + 3)
 end
 
--- Qual panoramica usar numa visao: nas telas divididas o topo da inteira ficaria acima da
--- visao, e o console TRAVA ao desenhar uma imagem cortada pelo topo da janela de recorte
--- (ui.clip). A versao "baixo" (so a parte de baixo) comeca exatamente no topo da visao.
+-- Qual panoramica usar numa visao: nas telas divididas so a parte de baixo da inteira
+-- aparece. A versao "baixo" (so essa parte, em pedacos estreitos) comeca no topo da visao
+-- e le do cartao so o que aparece (limite de 150 KB por quadro).
 local function panoramica(f, hy)
   if topo_fundo(f, hy) < 0 then return f.baixo end
   return f
@@ -151,13 +169,14 @@ function R.fundos(pista, visoes, carros)
     if i1 then
       local de, ate, passo = i1, i2, 1
       if p.sprites[i1] == ultima then de, ate, passo = i2, i1, -1 end   -- evita repetir a imagem
-      for i = de, ate, passo do ui.spr(p.sprites[i], x0 + p.inicio[i], y) end
+      for i = de, ate, passo do R.spr(p.sprites[i], x0 + p.inicio[i], y) end
       ultima = p.sprites[ate]
     end
   end
 end
 
-local CHAMAS = { 0.3, 0.7 }   -- posicao das chamas do nitro (fracao da largura do carro)
+-- onde ficam os escapamentos na imagem do carro (fracao da largura e da altura)
+local ESCAPE_X, ESCAPE_Y = { 0.27, 0.73 }, 0.80
 
 -- segmentos vizinhos da mesma cor viram um trapezio so enquanto a altura somada for ate esta
 -- (longe, cada segmento tem 1 ou 2 px: juntar economiza muitos comandos de desenho)
@@ -177,9 +196,6 @@ function R.visao(corrida, carro, v, quadro)
   local f = Arte.fundos[pista.fundo]
   local p = panoramica(f, hy)
   local fim_fundo = max(0, topo_fundo(p, hy)) + p.altura
-  -- bordas desta visao que sao bordas da tela (uma imagem so pode ser cortada por elas)
-  local tela_esq, tela_dir = v.x == 0, v.x + W >= C.LARGURA
-  local tela_cima, tela_baixo = v.y == 0, v.y + H >= C.ALTURA
 
   -- camera fica atras do carro
   local cam = carro.z - C.JOGADOR_Z
@@ -284,12 +300,14 @@ function R.visao(corrida, carro, v, quadro)
   local vc = 1
   local recorte = H
   local objetos, noite, larg_carro = pista.objetos, pista.noite, C.CARRO_LARGURA * hw
+  local itens = corrida.item_seg
+  local enfeite = H < C.ALTURA and Objetos.enfeite   -- telas divididas: metade dos enfeites
   for n = v.dist - 1, 1, -1 do
     while vc <= nv and VIS_N[vc] > n do vc = vc + 1 end
     local s1 = PS1[n]
     local tem_carro = vc <= nv and VIS_N[vc] == n
-    local lista = objetos[PSEG[n]]
-    if s1 and (lista or tem_carro) then
+    local lista, item = objetos[PSEG[n]], itens[PSEG[n]]
+    if s1 and (lista or tem_carro or item) then
       local px, py = PX1[n], PY1[n]
       -- so recorta quando a base do segmento ficou atras de um morro (no plano nao precisa)
       local clip = py > PCLIP[n] + 1 and PCLIP[n] or H
@@ -297,12 +315,16 @@ function R.visao(corrida, carro, v, quadro)
         ui.clip(v.x, v.y, W, max(1, clip))
         recorte = clip
       end
+      local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
       if lista then
-        local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
+        local pula = enfeite and PSEG[n] % 2 == 1
         for _, o in ipairs(lista) do
-          Objetos.desenhar(o, px + ox * o.x, py, kx, ky, noite, W, H)
+          if not (pula and enfeite[o.tipo]) then
+            Objetos.desenhar(o, px + ox * o.x, py, kx, ky, noite, W, H)
+          end
         end
       end
+      if item then Objetos.nitro(px + ox * item.x, py, kx, ky, W, H, quadro) end
       while vc <= nv and VIS_N[vc] == n do
         local outro = VIS_C[vc]
         local pct = (outro.z % SEG) / SEG
@@ -315,13 +337,11 @@ function R.visao(corrida, carro, v, quadro)
           local tam = TAM.reto[k]
           local w, h = tam[1], tam[2]
           local cx, cy = floor(sx - w / 2), floor(sy - h)
-          -- So desenha se nenhuma borda da janela de recorte cortar a imagem (bordas da
-          -- visao que nao sao bordas da tela, ou a linha de um morro): no console, imagem
-          -- cortada pelo recorte travou o jogo. Fora da tela tambem nao (coordenadas gigantes).
-          local cabe = cx < W and cx + w > 0 and cy < H and cy + h > 0
-            and (cx >= 0 or tela_esq) and (cx + w <= W or tela_dir) and (cy >= 0 or tela_cima)
-            and (cy + h <= recorte or (recorte == H and tela_baixo))
-          if cabe then ui.spr(SPR[outro.cor].reto[k], cx, cy) end
+          -- so se aparecer: fora da tela (ou todo atras do morro) nao manda nada ao console
+          -- (carros atras da camera dariam coordenadas gigantes)
+          if cx < W and cx + w > 0 and cy < recorte and cy + h > 0 then
+            R.spr(SPR[outro.cor].reto[k], cx, cy)
+          end
         end
         vc = vc + 1
       end
@@ -341,16 +361,16 @@ function R.visao(corrida, carro, v, quadro)
   local bx = floor(hw - sw / 2)
   if carro.batida > 0 then bx = bx + ((quadro % 4 < 2) and -2 or 2) end
   local by = floor(H - sh - 3 - tremor)
+  R.spr(spr, bx, by)
   if carro.nitro_t > 0 then
-    local f = 4 + (quadro % 3) * 2
-    local cy = by + floor(sh * 0.82)
-    for _, ex in ipairs(CHAMAS) do
-      local fx = bx + floor(sw * ex)
-      ui.trisfill(fx - 3, cy, fx + 3, cy, fx, cy + f, Cores.laranja)
-      ui.trisfill(fx - 1, cy, fx + 1, cy, fx, cy + f - 2, Cores.amarelo)
-    end
+    -- chamas nos dois escapamentos, em quadros diferentes (tremem e nunca repetem a imagem)
+    local tam = k <= 2 and "g" or "p"
+    local cw = Efeitos.chama[tam][1]
+    local q = (quadro // 4) % Efeitos.quadros_chama
+    local cy = by + floor(sh * ESCAPE_Y)
+    R.spr(CHAMA[tam][q + 1], bx + floor(sw * ESCAPE_X[1]) - cw // 2, cy)
+    R.spr(CHAMA[tam][(q + 1) % Efeitos.quadros_chama + 1], bx + floor(sw * ESCAPE_X[2]) - cw // 2, cy)
   end
-  ui.spr(spr, bx, by)
 end
 
 return R

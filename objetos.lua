@@ -10,6 +10,9 @@ local T = require "texto"
 
 local O = {}
 
+-- enfeites: nas telas divididas so metade deles e desenhada (deixa o jogo mais leve)
+O.enfeite = { palmeira = true, arbusto = true, pedra = true }
+
 -- largura de cada objeto para as batidas (em "unidades de pista"; nil = nao bate)
 O.largura = { poste = 0.12, palmeira = 0.18, placa = 0.3, arbusto = 0.3, pedra = 0.35 }
 
@@ -131,6 +134,20 @@ local DESENHOS = { poste = poste, palmeira = palmeira, placa = placa, arbusto = 
 local ALCANCE = { poste = 600, palmeira = 800, placa = 260, arbusto = 400, pedra = 260, portico = 1500 }
 local ALTURA = { poste = 1550, palmeira = 1700, placa = 760, arbusto = 700, pedra = 280, portico = 1800 }
 local ESCALA_MAX = 8   -- mais perto que isto, o objeto esta praticamente dentro da camera
+
+-- Nitro na pista: uma lata (azul, faixa branca, tampa vermelha) feita so de retangulos.
+-- Pisca para chamar atencao. (sx, sy) = base na tela; W x H = tamanho da visao.
+function O.nitro(sx, sy, kx, ky, W, H, quadro)
+  local h, meia = 300 * ky, 80 * kx
+  if h < 2 or kx > ESCALA_MAX or sy < 0 or sy - h * 1.2 > H or sx + meia < 0 or sx - meia > W then return end
+  local corpo, faixa = Cores.nitro, Cores.branco
+  if (quadro // 8) % 2 == 0 then corpo, faixa = faixa, corpo end
+  ret(sx - meia, sy - h, sx + meia, sy, corpo)
+  if h >= 6 then
+    ret(sx - meia, sy - h * 0.62, sx + meia, sy - h * 0.42, faixa)
+    ret(sx - meia * 0.45, sy - h * 1.18, sx + meia * 0.45, sy - h, Cores.vermelho)
+  end
+end
 
 -- (sx, sy) = base do objeto na tela; W x H = tamanho da visao
 function O.desenhar(o, sx, sy, kx, ky, noite, W, H)

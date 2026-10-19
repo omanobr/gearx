@@ -33,4 +33,10 @@ function E.baixo() return algum(DOWN) end
 function E.esq() return algum(LEFT) end
 function E.dir() return algum(RIGHT) end
 
+-- Para a escolha de carros: cada jogador (p = 0, 1, 2) com o seu controle.
+function E.esq_de(p) return ui.btnp(LEFT, p) end
+function E.dir_de(p) return ui.btnp(RIGHT, p) end
+function E.confirmar_de(p) return ui.btnp(BTN_Z, p) end
+function E.voltar_de(p) return ui.btnp(BTN_X, p) end
+
 return E

@@ -5,16 +5,20 @@ collectgarbage("generational")
 require "palette"      -- gerado pela ferramenta de construcao (todas as cores do jogo)
 require "sprites"      -- tabela Sprites com todas as imagens
 require "dados_arte"   -- gerado por ferramentas/preparar_arte.py
+require "dados_efeitos" -- gerado por ferramentas/gerar_efeitos.py
+require "dados_musica"  -- gerado por ferramentas/compor_musica.py
 
 -- Opcoes de teste vindas do simulador (o arquivo nao existe no console).
 local ok, dev = pcall(require, "dev_config")
 DEV = (ok and type(dev) == "table") and dev or {}
 
 local R = require "render"
+local Som = require "som"
 
 local TELAS = {
   titulo = require "telas.titulo",
   menu = require "telas.menu",
+  escolha = require "telas.escolha",
   corrida = require "telas.corrida",
   resultado = require "telas.resultado",
   teste = require "telas.teste",
@@ -41,6 +45,7 @@ if DEV.cena == "corrida" then
 else
   Jogo.ir("titulo")
 end
+Som.musica()
 
 -- medidor dos limites do aparelho (so no modo de teste do simulador, opcao "desempenho")
 local Medidor = DEV.desempenho and require "medidor"
@@ -52,6 +57,8 @@ function update()
   for i = 1, #paleta do palset(i - 1, paleta[i]) end
   ui.camera()
   ui.clip()
+  R.novo_quadro()
+  Som.atualizar()
 
   for _ = 1, DEV.turbo or 1 do Jogo.tela:atualizar() end   -- turbo: so no modo de teste
   Jogo.tela:desenhar()

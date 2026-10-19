@@ -16,6 +16,7 @@ return {
 
   -- cor de cada jogador (painel, nomes)
   jogador = { hex(0xE03030), hex(0x3870F0), hex(0xF8C838) },
+  nitro = hex(0x3870F0),        -- lata de nitro na pista (mesmo azul do J2: nao gasta cor nova)
 
   -- objetos da beira da estrada
   poste = hex(0x585868),

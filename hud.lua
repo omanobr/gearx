@@ -14,13 +14,28 @@ local function marcha(pct)
   return 5
 end
 
+-- Nitros guardados (ate C.NITRO_MAX); piscam quando o jogador pega um na pista.
 local function nitro(carro, x, y)
-  T.p("NITRO", x, y, Cores.branco, Cores.preto)
-  for i = 1, C.NITRO_QTD do
+  local pisca = carro.pegou > 0 and (carro.pegou // 5) % 2 == 0
+  T.p("NITRO", x, y, pisca and Cores.amarelo or Cores.branco, Cores.preto)
+  for i = 1, C.NITRO_MAX do
     local bx = x + 32 + (i - 1) * 10
     local cor = i <= carro.nitro and Cores.laranja or Cores.cinza_escuro
     if carro.nitro_t > 0 and i == carro.nitro + 1 and (carro.nitro_t // 4) % 2 == 0 then cor = Cores.amarelo end
+    if pisca and i == carro.nitro then cor = Cores.branco end
     ui.rectfill(bx, y, bx + 8, y + 8, cor)
+  end
+end
+
+-- Dano das batidas: barra que vai de verde a vermelho (menos velocidade e aceleracao).
+local function dano(carro, x, y, largura)
+  T.p("DANO", x, y, Cores.branco, Cores.preto)
+  local bx = x + 32
+  ui.rectfill(bx, y + 1, bx + largura, y + 7, Cores.cinza_escuro)
+  local cheio = (carro.dano * largura) // 1
+  if cheio > 0 then
+    local cor = carro.dano < 0.34 and Cores.verde or (carro.dano < 0.67 and Cores.amarelo or Cores.vermelho)
+    ui.rectfill(bx, y + 1, bx + cheio, y + 7, cor)
   end
 end
 
@@ -39,6 +54,7 @@ function Hud.desenhar(corrida, carro, v, varios)
     T.grande(volta .. "/" .. corrida.voltas, W - 8 - T.largura(volta .. "/" .. corrida.voltas, 3), 17, 3, Cores.amarelo, Cores.preto)
     T.p_centro(T.tempo(corrida.tempo), W / 2, 6, Cores.branco, Cores.preto)
     nitro(carro, 8, H - 14)
+    dano(carro, 8, H - 26, 48)
     local vel = string.format("%3d", kmh)
     T.grande(vel, W - 44 - T.largura(vel, 3), H - 28, 3, Cores.branco, Cores.preto)
     T.p("KM/H", W - 36, H - 14, Cores.branco, Cores.preto)
@@ -50,6 +66,7 @@ function Hud.desenhar(corrida, carro, v, varios)
     T.p_direita("VOLTA " .. volta .. "/" .. corrida.voltas, W - 5, 4, Cores.branco, Cores.preto)
     T.p_direita(T.tempo(corrida.tempo), W - 5, 14, Cores.branco, Cores.preto)
     nitro(carro, 5, H - 12)
+    dano(carro, 5, H - 23, 48)
     local vel = string.format("%3d", kmh)
     T.grande(vel, W - 34 - T.largura(vel, 2), H - 17, 2, Cores.branco, Cores.preto)
     T.p("KM/H", W - 29, H - 12, Cores.branco, Cores.preto)

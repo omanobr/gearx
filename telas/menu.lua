@@ -4,6 +4,7 @@ local T = require "texto"
 local Entrada = require "entrada"
 local Pistas = require "pistas"
 local Demo = require "demo"
+local R = require "render"
 
 local Tela = {}
 Tela.__index = Tela
@@ -39,7 +40,7 @@ function Tela:atualizar()
     if linha == "teste" then
       Jogo.ir("teste")
     elseif linha == "correr" then
-      Jogo.ir("corrida", {
+      Jogo.ir("escolha", {
         jogadores = op.jogadores, pista = op.pista, voltas = op.voltas,
         autopiloto = DEV.autopiloto,
       })
@@ -63,7 +64,7 @@ local function previa_pista(op, x, y, w, h)
   ui.clip(x, y, w, h)
   local px = math.floor(x - (f.largura - w) / 2)
   for i, spr in ipairs(f.sprites) do
-    ui.spr(spr, px, y + h - f.altura)
+    R.spr(spr, px, y + h - f.altura)
     px = px + f.larguras[i]
   end
   ui.clip()

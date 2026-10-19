@@ -16,7 +16,7 @@ C.HORIZONTE = 0.45               -- altura do horizonte (fracao da altura da tel
 -- Quantos segmentos desenhar para frente, conforme o numero de jogadores.
 -- Menos segmentos = jogo mais leve. O console executa ~50-60 mil instrucoes Lua por
 -- quadro: confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
-C.DISTANCIA = { 150, 100, 50 }
+C.DISTANCIA = { 150, 100, 46 }
 
 -- Fisica do carro (por segundo)
 C.VEL_MAX = C.SEG * 60           -- velocidade maxima: 60 segmentos por segundo
@@ -25,12 +25,27 @@ C.FREIO = C.VEL_MAX              -- freando
 C.SOLTO = C.VEL_MAX / 5          -- sem acelerar nem frear
 C.FORA_FREIO = C.VEL_MAX / 2     -- perda de velocidade fora da pista
 C.FORA_LIMITE = C.VEL_MAX / 4    -- velocidade maxima fora da pista
-C.CENTRIFUGA = 0.25              -- quanto as curvas "empurram" o carro para fora
+C.CENTRIFUGA = 0.28              -- quanto as curvas "empurram" o carro para fora: em curva
+                                 -- forte e longa, a toda, so virar nao segura (tem que aliviar)
+C.CURVA_PERDA = 0.025            -- em curva a velocidade maxima cai |curva| x isto (curva 4 = -10%)
 C.KMH = 290                      -- velocidade maxima mostrada no painel
 
-C.NITRO_QTD = 3                  -- nitros por corrida
+C.NITRO_QTD = 3                  -- nitros no comeco da corrida
+C.NITRO_MAX = 5                  -- maximo de nitros guardados (pegando os da pista)
 C.NITRO_QUADROS = 180            -- duracao do nitro (60 quadros = 1 segundo)
 C.NITRO_VEL = 1.3                -- nitro aumenta a velocidade maxima em 30%
+
+-- Nitros que aparecem na pista: so na frente de quem esta ATRAS (o lider nao pega todos)
+C.ITEM_INTERVALO = 9 * 60        -- quadros entre um nitro e outro (em media)
+C.ITEM_MAX = 3                   -- quantos podem estar na pista ao mesmo tempo
+C.ITEM_DIST = { 90, 130 }        -- aparece entre 90 e 130 segmentos a frente (uns 2 s de antecedencia a toda)
+C.ITEM_VIDA = 25 * 60            -- some depois de 25 segundos
+
+-- Dano das batidas: diminui a velocidade maxima e a aceleracao (indicador no painel)
+C.DANO_BATIDA = 0.08             -- batida na traseira de outro carro (a 100% da velocidade)
+C.DANO_OBJETO = 0.12             -- batida em poste, arvore, placa...
+C.DANO_VEL = 0.25                -- com dano total, a velocidade maxima cai 25%
+C.DANO_ACEL = 0.40               -- e a aceleracao cai 40%
 
 C.CARRO_LARGURA = 360            -- largura do carro no mundo
 C.CARRO_X = C.CARRO_LARGURA / C.ESTRADA   -- largura do carro em "unidades de pista"
