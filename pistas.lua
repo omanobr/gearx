@@ -17,6 +17,7 @@
 --   a_cada   : a cada quantos segmentos aparece um
 --   variacao : sorteia uma distancia extra (deixa mais natural)
 -- Placas de curva sao colocadas sozinhas nas curvas fortes.
+-- (v0.92: menos palmeiras e 1/3 dos postes: cada objeto custa processamento no console.)
 local hex = Palette.hex
 
 local function reta(comprimento, altura)
@@ -38,8 +39,8 @@ return {
       curva(80, -2), reta(100),
     },
     objetos = {
-      { tipo = "palmeira", lado = -1, x = 1.5, a_cada = 6, variacao = 0.8 },
-      { tipo = "poste", lado = 1, x = 1.25, a_cada = 14 },
+      { tipo = "palmeira", lado = -1, x = 1.5, a_cada = 10, variacao = 0.8 },
+      { tipo = "poste", lado = 1, x = 1.25, a_cada = 42 },
       { tipo = "arbusto", lado = -1, x = 2.6, a_cada = 9, variacao = 1.5 },
     },
     cores = {
@@ -62,7 +63,7 @@ return {
     objetos = {
       { tipo = "arbusto", lado = 2, x = 1.6, a_cada = 5, variacao = 1.2 },
       { tipo = "pedra", lado = -1, x = 2.2, a_cada = 11, variacao = 1.0 },
-      { tipo = "poste", lado = 1, x = 1.25, a_cada = 16 },
+      { tipo = "poste", lado = 1, x = 1.25, a_cada = 48 },
     },
     cores = {
       asfalto = { hex(0x707080), hex(0x686878) },
@@ -80,8 +81,8 @@ return {
       curva(80, -3), curva(80, 3), curva(80, -3), reta(120), curva(140, -4, 20), reta(100, -20),
     },
     objetos = {
-      { tipo = "palmeira", lado = 2, x = 1.45, a_cada = 7, variacao = 0.6 },
-      { tipo = "poste", lado = 1, x = 1.25, a_cada = 12 },
+      { tipo = "palmeira", lado = 2, x = 1.45, a_cada = 12, variacao = 0.6 },
+      { tipo = "poste", lado = 1, x = 1.25, a_cada = 36 },
     },
     cores = {
       asfalto = { hex(0x5E5068), hex(0x584A62) },
@@ -101,9 +102,9 @@ return {
       reta(100),
     },
     objetos = {
-      { tipo = "palmeira", lado = -1, x = 1.5, a_cada = 6, variacao = 1.0 },
+      { tipo = "palmeira", lado = -1, x = 1.5, a_cada = 10, variacao = 1.0 },
       { tipo = "arbusto", lado = -1, x = 2.4, a_cada = 8, variacao = 1.2 },
-      { tipo = "poste", lado = 1, x = 1.25, a_cada = 12 },
+      { tipo = "poste", lado = 1, x = 1.25, a_cada = 36 },
     },
     cores = {
       asfalto = { hex(0x4C4864), hex(0x46425E) },
@@ -124,8 +125,8 @@ return {
       curva(140, -5), reta(100), curva(80, 3), reta(100),
     },
     objetos = {
-      { tipo = "poste", lado = 2, x = 1.25, a_cada = 10 },
-      { tipo = "palmeira", lado = -1, x = 1.8, a_cada = 7, variacao = 1.0 },
+      { tipo = "poste", lado = 2, x = 1.25, a_cada = 30 },
+      { tipo = "palmeira", lado = -1, x = 1.8, a_cada = 12, variacao = 1.0 },
     },
     cores = {
       asfalto = { hex(0x383848), hex(0x323242) },
