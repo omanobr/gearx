@@ -221,6 +221,19 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
     vmax = vmax * C.NITRO_VEL
   end
 
+  -- arrasto do volante (so jogadores; config.lua): segurando a curva o medidor enche e a
+  -- velocidade maxima cai; a velocidade desce ate ela devagar (queda). Ao soltar, esvazia.
+  local queda = C.SOLTO * 2              -- quanto a velocidade desce por segundo acima da maxima
+  if jogador then
+    if esq or dir then
+      carro.arrasto = min(1, max(carro.arrasto, C.ARRASTO_INICIO) + dt / C.ARRASTO_ENCHE)
+      vmax = vmax * (1 - C.ARRASTO_PERDA * carro.arrasto / carro.aderencia)
+      queda = C.ARRASTO_FREIO
+    elseif carro.arrasto > 0 then
+      carro.arrasto = max(0, carro.arrasto - dt / C.ARRASTO_ESVAZIA)
+    end
+  end
+
   -- a curva empurra para fora; a toda, numa curva forte e longa, so virar nao segura
   local pct = carro.vel / C.VEL_MAX
   local dx = dt * 2 * pct
@@ -230,20 +243,14 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
   carro.x = carro.x - dx * pct * curva * C.CENTRIFUGA / carro.aderencia
 
   local acel_carro = C.ACEL * carro.mult_acel * (1 - C.DANO_ACEL * carro.dano)
-  if acel then carro.vel = carro.vel + acel_carro * dt * (carro.nitro_t > 0 and 2 or 1)
+  -- acelerando, so ate a velocidade maxima (o arrasto do volante abaixa a maxima e a
+  -- aceleracao nao pode esconder a perda)
+  if acel then
+    if carro.vel < vmax then
+      carro.vel = min(vmax, carro.vel + acel_carro * dt * (carro.nitro_t > 0 and 2 or 1))
+    end
   elseif freia then carro.vel = carro.vel - C.FREIO * dt
   else carro.vel = carro.vel - C.SOLTO * dt end
-
-  -- arrasto do volante (so jogadores; config.lua): o medidor enche segurando a curva e
-  -- esvazia ao soltar; so freia enquanto vira (mais aderencia, menos arrasto)
-  if jogador then
-    if esq or dir then
-      carro.arrasto = min(1, carro.arrasto + dt / C.ARRASTO_ENCHE)
-      carro.vel = carro.vel - C.ARRASTO_FREIO * carro.arrasto * pct * dt / carro.aderencia
-    elseif carro.arrasto > 0 then
-      carro.arrasto = max(0, carro.arrasto - dt / C.ARRASTO_ESVAZIA)
-    end
-  end
 
   if abs(carro.x) > 1 then
     if carro.vel > C.FORA_LIMITE then carro.vel = carro.vel - C.FORA_FREIO * dt end
@@ -253,7 +260,7 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
       if self:bater_objetos(carro, (i - 1 + k) % pista.n + 1) then break end
     end
   end
-  if carro.vel > vmax then carro.vel = max(vmax, carro.vel - C.SOLTO * dt * 2) end
+  if carro.vel > vmax then carro.vel = max(vmax, carro.vel - queda * dt) end
   if carro.vel < 0 then carro.vel = 0 end
   carro.x = max(-2.5, min(2.5, carro.x))
 

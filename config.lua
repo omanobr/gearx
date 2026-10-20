@@ -1,7 +1,7 @@
 -- Ajustes gerais do jogo. Mude um numero, salve, e veja o efeito no simulador.
 local C = {}
 
-C.VERSAO = "v0.98b"                -- aparece no titulo e no menu
+C.VERSAO = "v0.98c"                -- aparece no titulo e no menu
 C.LARGURA, C.ALTURA = 480, 270
 
 -- Estrada (medidas no "mundo 3D", nao em pixels)
@@ -58,13 +58,17 @@ C.CENTRIFUGA = 0.28              -- quanto as curvas "empurram" o carro para for
                                  -- forte e longa, a toda, so virar nao segura (tem que aliviar)
 C.CURVA_PERDA = 0.025            -- computador: em curva a velocidade maxima cai |curva| x isto
                                  -- (curva 4 = -10%). Os jogadores usam o arrasto do volante:
--- Arrasto do volante (so jogadores, v0.98b, ideia do Felipe): um medidor escondido enche
--- enquanto o jogador segura esquerda ou direita e esvazia aos poucos quando solta. So perde
--- velocidade enquanto vira, e mais quanto mais cheio o medidor: virar em toques curtos quase
--- nao perde nada; segurar a curva toda perde bastante.
-C.ARRASTO_ENCHE = 1.5            -- segundos segurando a curva para o medidor encher
+-- Arrasto do volante (so jogadores, ideia do Felipe): um medidor escondido enche enquanto o
+-- jogador segura esquerda ou direita e esvazia aos poucos quando solta. Enquanto vira, a
+-- velocidade maxima cai (mais quanto mais cheio o medidor) e a velocidade desce devagar ate
+-- ela; ao soltar, o limite some e o carro volta a acelerar. v0.98c: o medidor ja comeca em
+-- ARRASTO_INICIO (as curvas sao curtas: na v0.98b, com a aceleracao, demorava ~1 s para a
+-- velocidade comecar a cair), com uma queda mais lenta.
+C.ARRASTO_INICIO = 0.35          -- ao comecar a virar, o medidor vai na hora para pelo menos isto
+C.ARRASTO_ENCHE = 1.2            -- segundos segurando a curva para o medidor encher
 C.ARRASTO_ESVAZIA = 1.0          -- segundos sem virar para ele esvaziar
-C.ARRASTO_FREIO = C.VEL_MAX * 0.35   -- perda por segundo com o medidor cheio, a toda velocidade
+C.ARRASTO_PERDA = 0.25           -- com o medidor cheio, a velocidade maxima cai 25% enquanto vira
+C.ARRASTO_FREIO = C.VEL_MAX * 0.12   -- quanto a velocidade desce por segundo ate esse limite
 C.KMH = 290                      -- velocidade maxima mostrada no painel
 
 C.NITRO_QTD = 3                  -- nitros no comeco da corrida
