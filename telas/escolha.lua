@@ -62,7 +62,7 @@ function Tela:atualizar()
       if Entrada.confirmar_de(p) then
         self.pronto[j] = true
       elseif Entrada.voltar_de(p) then
-        Jogo.ir("menu")
+        Jogo.ir("menu", "corrida")
         return
       end
     elseif Entrada.voltar_de(p) then

@@ -25,7 +25,7 @@ function Tela:atualizar()
   self.t = self.t + 1
   if self.t < 30 then return end
   if Entrada.confirmar() then Jogo.ir("corrida", self.opcoes)
-  elseif Entrada.voltar() then Jogo.ir("menu") end
+  elseif Entrada.voltar() then Jogo.ir("menu", "corrida") end
 end
 
 function Tela:desenhar()

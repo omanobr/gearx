@@ -41,7 +41,7 @@ function Tela:atualizar()
   if self.dir >= SEGURAR and self.pagina < PAGINAS then
     self.pagina, self.dir = self.pagina + 1, -9999   -- solte o botao antes de trocar de novo
   elseif self.esq >= SEGURAR then
-    if self.pagina == 1 then Jogo.ir("menu") return end
+    if self.pagina == 1 then Jogo.ir("menu", "opcoes") return end
     self.pagina, self.esq = self.pagina - 1, -9999
   end
 end

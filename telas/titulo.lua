@@ -1,4 +1,5 @@
 -- Tela de titulo.
+local C = require "config"
 local Cores = require "cores"
 local T = require "texto"
 local Entrada = require "entrada"
@@ -30,7 +31,7 @@ function Tela:desenhar()
   if (self.t // 30) % 2 == 0 then
     T.grande_centro("APERTE " .. Entrada.NOME.confirmar, 240, 176, 3, Cores.branco, Cores.preto)
   end
-  T.p("v0.97k", 6, 258, Cores.cinza, Cores.preto)
+  T.p(C.VERSAO, 6, 258, Cores.cinza, Cores.preto)
 end
 
 return Tela

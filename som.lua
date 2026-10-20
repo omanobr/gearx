@@ -4,10 +4,16 @@
 local Som = {}
 
 function Som.musica()
-  if not (sfx and sfx.music) then return end
+  if not (sfx and sfx.music) or Jogo.opcoes.musica == false then return end
   -- pcall: se algo der errado no som, o jogo continua sem musica (nao da para testar
   -- o som no simulador)
   pcall(sfx.music, Musica.arquivo)
+end
+
+-- para a musica (menu de opcoes); sfx.music(-1) para, segundo a documentacao do Lupi
+function Som.parar()
+  if not (sfx and sfx.music) then return end
+  pcall(sfx.music, -1)
 end
 
 return Som

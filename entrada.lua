@@ -35,7 +35,21 @@ local function algum(botao)
 end
 
 -- Nomes dos botoes do controle, para os textos da tela.
-E.NOME = { confirmar = "B", voltar = "A", acelerar = "B", frear = "A", nitro = "X/Y/R" }
+E.NOME = { confirmar = "B", voltar = "A", acelerar = "B", frear = "A", nitro = "X/Y/R", pausa = "START" }
+
+-- Pausa: START. O Lupi nao tem constante para ele: no console e o botao 6 (Felipe apertou o
+-- START na pagina 1 da tela de teste, v0.97k; o console tambem tem BTN_SYSTEM = 7, que a
+-- documentacao nao lista). No simulador o 6 e o A (BTN_X): la a pausa fica no START de um
+-- controle de verdade (15 no raylib) e no L do teclado (tecla G).
+local PAUSA = NO_CONSOLE and { 6 } or { 15, BOTAO.L }
+function E.pausar()
+  for p = 0, 2 do
+    for i = 1, #PAUSA do
+      if ui.btnp(PAUSA[i], p) then return true end
+    end
+  end
+  return false
+end
 
 function E.confirmar() return algum(B) end
 function E.voltar() return algum(A) end

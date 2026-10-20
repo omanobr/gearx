@@ -30,7 +30,7 @@ local TELAS = {
 }
 
 Jogo = {
-  opcoes = { jogadores = 1, pista = 1, voltas = 3 },
+  opcoes = { jogadores = 1, pista = 1, voltas = 3, musica = true },
   tela = nil,
 }
 
@@ -62,6 +62,7 @@ local Medidor = DEV.desempenho and require "medidor"
 -- o teste de desempenho usa as medidas sempre)
 local Diag = require "diagnostico"
 Diag.ligado = C.DIAGNOSTICO
+Jogo.diagnostico_rodape = C.DIAGNOSTICO   -- FPS no rodape (menu Opcoes); o log continua
 
 -- DEV.lento (so no simulador): o jogo anda 1 de cada N quadros, como o console quando o
 -- quadro demora (frameskip); nos outros so redesenha a mesma cena (o simulador apaga a tela
@@ -105,5 +106,5 @@ function update(frame)
     Medidor.desenhar()
   end
   Diag.fim()
-  if Diag.ligado then Diag.desenhar() end
+  if Jogo.diagnostico_rodape then Diag.desenhar() end
 end

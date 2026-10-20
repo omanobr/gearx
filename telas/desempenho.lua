@@ -182,7 +182,7 @@ end
 function Tela:atualizar()
   if Entrada.voltar() then
     restaurar()
-    Jogo.ir("menu")
+    Jogo.ir("menu", "opcoes")
     return
   end
   if self.teste > #TESTES then
