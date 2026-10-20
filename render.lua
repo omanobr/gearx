@@ -40,6 +40,7 @@ local IT_N, IT_O = {}, {}
 -- console, as imagens de Sprites nao trazem largura e altura (so servem para o ui.spr).
 local SPR, LARGURA_NIVEL1 = {}, 1
 local TAM
+local PARECIDA = { vermelho = "laranja", original = "amarelo" }   -- cor que substitui (veja R.preparar)
 local CHAMA = { g = {}, p = {} }   -- chamas do nitro (ferramentas/gerar_efeitos.py)
 -- estrada em tiles: folha, tile e largura do tile de cada largura Z (dados_estrada.lua)
 local EF, ET, EW = {}, {}, {}
@@ -65,11 +66,24 @@ function R.preparar()
     for cor, pasta in pairs(Sprites.img.carros[modelo]) do
       local t = { reto = {}, esq = {}, dir = {} }
       for k = 1, Arte.carros.niveis do
-        t.reto[k] = pasta["r" .. k]   -- nomes curtos: o console descarta caminhos com 32+ letras
-        t.esq[k] = pasta["e" .. k]
-        t.dir[k] = pasta["d" .. k]
+        t.reto[k] = pasta["reto" .. k]
+        t.esq[k] = pasta["esq" .. k]
+        t.dir[k] = pasta["dir" .. k]
       end
       SPR[modelo][cor] = t
+    end
+    -- Niveis que nao existem no console (nome com mais de 31 caracteres: fusca/monza nas cores
+    -- "original" e "vermelho", niveis 10 a 17, ferramentas/preparar_arte.py nao gera): usa o
+    -- mesmo nivel de outra cor do mesmo modelo (sao carros longe, pequenos na tela).
+    for cor, t in pairs(SPR[modelo]) do
+      for k = 1, Arte.carros.niveis do
+        if not t.reto[k] then
+          local parecida = SPR[modelo][PARECIDA[cor]]
+          t.reto[k] = parecida and parecida.reto[k]
+          for _, outra in pairs(SPR[modelo]) do t.reto[k] = t.reto[k] or outra.reto[k] end
+          t.reto[k] = t.reto[k] or t.reto[k - 1]
+        end
+      end
     end
   end
   LARGURA_NIVEL1 = TAM[Arte.carros.modelos[1]].reto[1][1]   -- igual em todos os modelos
@@ -533,7 +547,7 @@ function R.visao(corrida, carro, v, quadro)
   -- coqueiros pequenos em imagem so em 1 jogador: em 2 a visao e achatada (as imagens foram
   -- feitas na proporcao de 1 jogador) e em 3 cada coqueiro de meia distancia, vezes 3 visoes,
   -- passava de 32 cargas de imagem por quadro (e la sao poucos coqueiros)
-  Objetos.coqueiro_imagem = W > 300 and fy > hw * 0.5
+  Objetos.coqueiro_imagem = Objetos.tem_coqueiro_imagem and W > 300 and fy > hw * 0.5
   local f = Arte.fundos[pista.fundo]
   local p = panoramica(f, hy)
   local fim_fundo = max(0, topo_fundo(p, hy)) + p.altura

@@ -88,7 +88,7 @@ local TESTES = {
   end },
   { "30 CARROS, 2 IMAGENS", function()
     fundo()
-    local a, b = Sprites.img.carros.ka.vermelho.r5, Sprites.img.carros.gol.azul.r5
+    local a, b = Sprites.img.carros.ka.vermelho.reto5, Sprites.img.carros.gol.azul.reto5
     for k = 0, 29 do ui.spr(k % 2 == 0 and a or b, (k % 10) * 46, 40 + (k // 10) * 50) end
   end },
   { "100 TEXTOS PEQUENOS", function()

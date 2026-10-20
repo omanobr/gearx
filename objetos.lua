@@ -75,8 +75,10 @@ local TRONCO = Cores.tronco
 -- Coqueiros pequenos ja desenhados (ferramentas/gerar_efeitos.py), pela altura do tronco
 -- em pixels: { imagem, tile da folha (ou false), dx, dy }. IMAGENS_COQUEIRO[1] inclina para a
 -- direita, [-1] para a esquerda (espelhados). Longe vem da folha de tiles "longe".
-local IMAGENS_COQUEIRO = { [1] = {}, [-1] = {} }
-do
+-- (Desligado na v0.97d: o console nao aceita mais arquivos novos do GearX ate reinstalar;
+-- sem Efeitos.coqueiro_longe, os coqueiros sao todos de triangulos.)
+local IMAGENS_COQUEIRO = Efeitos.coqueiro_longe and { [1] = {}, [-1] = {} }
+if IMAGENS_COQUEIRO then
   local pasta = Sprites.img.coqueiro
   for h, t in pairs(Efeitos.coqueiro_longe) do
     IMAGENS_COQUEIRO[1][h] = { pasta.longe, t[1], t[2], t[3] }
@@ -88,7 +90,8 @@ do
   end
 end
 -- so em 1 jogador: render.lua acerta a cada visao
-O.coqueiro_imagem = true
+O.coqueiro_imagem = false
+O.tem_coqueiro_imagem = IMAGENS_COQUEIRO and true or false
 
 -- Coqueiro: abaixo de MEDIO_PX de altura, uma imagem pronta (1 comando, poucas contas: a
 -- folha "longe" e carregada uma vez para todos os coqueiros longe em seguida). Perto, ou em
@@ -203,7 +206,7 @@ function O.preparar(o)
   o.alt, o.alc = ALTURA[o.tipo] or 0, ALCANCE[o.tipo] or 0
   o.lado = o.x > 0 and 1 or -1
   o.enfeite = O.enfeite[o.tipo] or false
-  if o.tipo == "palmeira" then o.imagens = IMAGENS_COQUEIRO[o.lado] end
+  if o.tipo == "palmeira" and IMAGENS_COQUEIRO then o.imagens = IMAGENS_COQUEIRO[o.lado] end
 end
 
 -- (sx, sy) = base do objeto na tela; W x H = tamanho da visao
