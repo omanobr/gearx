@@ -54,7 +54,7 @@ function Corrida.nova(op)
       z = L - (floor((g - 1) / 2) * 4 + 2) * C.SEG,
       x = (g % 2 == 1) and -0.45 or 0.45,
       vel = 0, volta = -1, dist = 0, posicao = g,
-      nitro = C.NITRO_QTD, nitro_t = 0, direcao = 0, fundo_x = 0, batida = 0,
+      nitro = C.NITRO_QTD, nitro_t = 0, direcao = 0, fundo_x = 0, batida = 0, arrasto = 0,
       terminou = false, troca = 60 + g * 25,
       dano = 0, pegou = 0,                       -- dano das batidas (0 a 1); pisca ao pegar nitro
       mult_vel = 1, mult_acel = 1, aderencia = 1,  -- jeito de dirigir (carros.lua)
@@ -209,11 +209,13 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
     carro.nitro = carro.nitro - 1
     carro.nitro_t = C.NITRO_QUADROS
   end
-  -- velocidade maxima: do carro, menos o dano, menos o arrasto dos pneus na curva
-  -- (curva forte = mais perda; carro com mais aderencia perde menos)
+  -- velocidade maxima: do carro, menos o dano; no computador (e no piloto automatico), menos
+  -- o arrasto dos pneus na curva (curva forte = mais perda; mais aderencia, menos perda). Os
+  -- jogadores perdem velocidade pelo arrasto do volante (mais abaixo).
+  local jogador = carro.humano and not carro.auto
   local curva = pista.curva[i]
   local vmax = C.VEL_MAX * carro.mult_vel * (1 - C.DANO_VEL * carro.dano)
-    * (1 - C.CURVA_PERDA * abs(curva) / carro.aderencia)
+  if not jogador then vmax = vmax * (1 - C.CURVA_PERDA * abs(curva) / carro.aderencia) end
   if carro.nitro_t > 0 then
     carro.nitro_t = max(0, carro.nitro_t - p)
     vmax = vmax * C.NITRO_VEL
@@ -231,6 +233,17 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
   if acel then carro.vel = carro.vel + acel_carro * dt * (carro.nitro_t > 0 and 2 or 1)
   elseif freia then carro.vel = carro.vel - C.FREIO * dt
   else carro.vel = carro.vel - C.SOLTO * dt end
+
+  -- arrasto do volante (so jogadores; config.lua): o medidor enche segurando a curva e
+  -- esvazia ao soltar; so freia enquanto vira (mais aderencia, menos arrasto)
+  if jogador then
+    if esq or dir then
+      carro.arrasto = min(1, carro.arrasto + dt / C.ARRASTO_ENCHE)
+      carro.vel = carro.vel - C.ARRASTO_FREIO * carro.arrasto * pct * dt / carro.aderencia
+    elseif carro.arrasto > 0 then
+      carro.arrasto = max(0, carro.arrasto - dt / C.ARRASTO_ESVAZIA)
+    end
+  end
 
   if abs(carro.x) > 1 then
     if carro.vel > C.FORA_LIMITE then carro.vel = carro.vel - C.FORA_FREIO * dt end
