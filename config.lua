@@ -25,11 +25,11 @@ C.ESTRADA_DIVIDIDA = "linhas2"
 -- (cabo USB). Temporario, enquanto deixamos o jogo leve no aparelho.
 C.DIAGNOSTICO = true
 
--- Paleta: a documentacao do Lupi manda registrar as cores (ui.palset) todo quadro, mas
--- reenviar as ~230 cores custava 5% do processamento da corrida. Com false, o jogo reenvia
--- so ao trocar de tela e a cada PALETA_A_CADA quadros (por garantia). Se no console as cores
--- sairem erradas ou piscarem, volte para true.
-C.PALETA_TODO_QUADRO = false
+-- Paleta: a documentacao do Lupi manda registrar as cores (ui.palset) todo quadro. E
+-- obrigatorio: na v0.97f (false: so ao trocar de tela e a cada PALETA_A_CADA quadros) o
+-- console mostrou tudo preto menos a estrada (que tem cores proprias, enviadas todo quadro),
+-- piscando a cada 5 s. O console zera a paleta a cada quadro. Deixe true.
+C.PALETA_TODO_QUADRO = true
 C.PALETA_A_CADA = 300
 
 -- Quantos segmentos desenhar para frente, conforme o numero de jogadores, e ate quantos
