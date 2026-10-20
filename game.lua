@@ -30,7 +30,7 @@ local TELAS = {
 }
 
 Jogo = {
-  opcoes = { jogadores = 1, pista = 1, voltas = 3, musica = true },
+  opcoes = { jogadores = 1, pista = 2, voltas = 3, musica = true },   -- pista 2 = Orla da Cidade
   tela = nil,
 }
 
