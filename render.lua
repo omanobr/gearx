@@ -231,12 +231,23 @@ local XC, DXS, VAR, HA, HD = {}, {}, {}, {}, {}
 -- faixas de grama (de longe para perto na hora de desenhar)
 local BY1, BY2, BX, BC = {}, {}, {}, {}
 
+-- Escala horizontal da visao (pixels por unidade do mundo, vezes a distancia): no maximo a
+-- proporcao da tela cheia (meia largura / altura abaixo do horizonte). Em 1 e 3 jogadores e a
+-- meia largura; em 2 jogadores (visao baixa e larga) fica menor: a cena sai na proporcao certa,
+-- com a estrada e os carros menores e mais paisagem dos lados (v0.98: os carros ocupavam
+-- metade da visao). hw continua sendo o centro da visao.
+local PROPORCAO = (C.LARGURA * 0.5) / (C.ALTURA - (C.ALTURA * C.HORIZONTE) // 1)
+local function escala_x(W, H, hy)
+  return min(W * 0.5, (H - hy) * PROPORCAO)
+end
+R.escala_x = escala_x
+
 local TABELAS = {}
 local function tabelas(W, H, hy)
   local chave = W * 1000000 + H * 1000 + hy
   local t = TABELAS[chave]
   if t then return t end
-  local hw, fy = W * 0.5, H - hy
+  local hw, fy = escala_x(W, H, hy), H - hy
   local prof_fy = CAM_PROF * fy
   t = { zs = {}, kx = {}, w = {}, f = {}, id = {}, tw = {}, rmax = 3 * fy }
   for r = 1, t.rmax do
@@ -339,7 +350,7 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
   dados_da_pista(pista)
   local N, curvas, alturas, prox, var = pista.n, pista.curva, pista.y, pista.prox, pista.var
   local hw, fy = W * 0.5, H - hy
-  local prof_fy, prof_hw = CAM_PROF * fy, CAM_PROF * hw
+  local prof_fy, prof_hw = CAM_PROF * fy, CAM_PROF * escala_x(W, H, hy)
   local T = tabelas(W, H, hy)
   local ZS, KX, LW, TF, TID, TW = T.zs, T.kx, T.w, T.f, T.id, T.tw
   local PSEG_, PCLIP_, XC_, DXS_, VAR_, HA_, HD_ = PSEG, PCLIP, XC, DXS, VAR, HA, HD
@@ -553,6 +564,7 @@ function R.visao(corrida, carro, v, quadro)
   local curvas, alturas, cores = pista.curva, pista.y, pista.cores
   local W, H, hy = v.w, v.h, v.hy
   local hw, fy = W * 0.5, H - hy
+  local hx = escala_x(W, H, hy)            -- escala horizontal (hw e o centro)
 
   ui.clip(v.x, v.y, W, H)
   ui.camera(-v.x, -v.y)
@@ -560,7 +572,7 @@ function R.visao(corrida, carro, v, quadro)
   -- coqueiros pequenos em imagem so em 1 jogador: em 2 a visao e achatada (as imagens foram
   -- feitas na proporcao de 1 jogador) e em 3 cada coqueiro de meia distancia, vezes 3 visoes,
   -- passava de 32 cargas de imagem por quadro (e la sao poucos coqueiros)
-  Objetos.coqueiro_imagem = Objetos.tem_coqueiro_imagem and W > 300 and fy > hw * 0.5
+  Objetos.coqueiro_imagem = Objetos.tem_coqueiro_imagem and W > 300 and H > 200
   local f = Arte.fundos[pista.fundo]
   local p = panoramica(f, hy)
   local fim_fundo = max(0, topo_fundo(p, hy)) + p.altura
@@ -575,12 +587,12 @@ function R.visao(corrida, carro, v, quadro)
   local cam_y = ya + (yb - ya) * ((carro.z - ps * SEG) / SEG) + C.CAM_ALTURA
   local cam_x = carro.x * C.ESTRADA
 
-  local CAM_PROF, ZEBRA, larg = C.CAM_PROF, C.ZEBRA, C.ESTRADA * hw
+  local CAM_PROF, ZEBRA, larg = C.CAM_PROF, C.ZEBRA, C.ESTRADA * hx
   local modo = H < C.ALTURA and R.estrada_dividida or R.estrada
   local por_linhas = modo == "linhas" or modo == "linhas2"
   if por_linhas then
     -- estrada por linhas (v0.94); objetos e carros projetam so os segmentos onde estao
-    q_off, q_hw, q_prof_hw, q_prof_fy = base_pct * SEG, hw, CAM_PROF * hw, CAM_PROF * fy
+    q_off, q_hw, q_prof_hw, q_prof_fy = base_pct * SEG, hw, CAM_PROF * hx, CAM_PROF * fy
     q_hy, q_cam_y, q_alt = hy, cam_y, alturas
     estrada_linhas(pista, cores, v.dist, W, H, hy, base, base_pct * SEG, cam_x, cam_y, f.cor_mar, fim_fundo,
       modo == "linhas2")
@@ -598,9 +610,9 @@ function R.visao(corrida, carro, v, quadro)
     local s1, X1, Y1
     if z > CAM_PROF then
       s1 = CAM_PROF / z
-      X1, Y1 = hw + s1 * (x - cam_x) * hw, hy + s1 * (cam_y - alturas[base % N + 1]) * fy
+      X1, Y1 = hw + s1 * (x - cam_x) * hx, hy + s1 * (cam_y - alturas[base % N + 1]) * fy
     end
-    local prof_hw, prof_fy = CAM_PROF * hw, CAM_PROF * fy
+    local prof_hw, prof_fy = CAM_PROF * hx, CAM_PROF * fy
     for n = 0, v.dist - 1 do
       local i = (base + n) % N + 1
       local i2 = i == N and 1 or i + 1
@@ -700,7 +712,7 @@ function R.visao(corrida, carro, v, quadro)
   --    direto de um segmento com objetos para o anterior (pista.obj_ant), e visita tambem os
   --    das latas de nitro e dos carros. (Antes visitava os 100 segmentos, quase todos vazios.)
   local recorte = H
-  local objetos, noite, larg_carro = pista.objetos, pista.noite, C.CARRO_LARGURA * hw
+  local objetos, noite, larg_carro = pista.objetos, pista.noite, C.CARRO_LARGURA * hx
   local enfeite = H < C.ALTURA   -- telas divididas: metade dos enfeites
   local PSEG_, PS1_, VIS_N_, ant = PSEG, PS1, VIS_N, pista.obj_ant
   local vc = 1                                  -- proximo carro (VIS_N esta de longe para perto)
@@ -747,7 +759,7 @@ function R.visao(corrida, carro, v, quadro)
         ui.clip(v.x, v.y, W, max(1, clip))
         recorte = clip
       end
-      local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
+      local kx, ky, ox = s1 * hx, s1 * fy, s1 * larg
       -- objetos: a mesma conta de Objetos.desenhar (fora da tela ou colado na camera nao
       -- desenha), feita aqui para nao chamar mais uma funcao por objeto
       if lista and kx <= ESCALA_OBJ and py >= 0 then
@@ -792,7 +804,7 @@ function R.visao(corrida, carro, v, quadro)
 
   -- 4) o carro do jogador
   if R.sem.carros then return end
-  local k = nivel(C.CARRO_LARGURA / C.CAM_ALTURA * hw)
+  local k = nivel(C.CARRO_LARGURA / C.CAM_ALTURA * hx)
   local vistas, tamanhos = SPR[carro.modelo][carro.cor], TAM[carro.modelo]
   local vista = "reto"   -- virando so se existir a vista de curva neste tamanho
   if carro.direcao < 0 and vistas.esq[k] then vista = "esq" elseif carro.direcao > 0 and vistas.dir[k] then vista = "dir" end

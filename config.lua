@@ -1,7 +1,7 @@
 -- Ajustes gerais do jogo. Mude um numero, salve, e veja o efeito no simulador.
 local C = {}
 
-C.VERSAO = "v0.98"                -- aparece no titulo e no menu
+C.VERSAO = "v0.98a"                -- aparece no titulo e no menu
 C.LARGURA, C.ALTURA = 480, 270
 
 -- Estrada (medidas no "mundo 3D", nao em pixels)
