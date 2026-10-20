@@ -82,8 +82,43 @@ function D.arquivos()
     tostring(fa ~= nil and fa.r1 ~= nil), type(e), table.concat(campos, ",")))
 end
 
+-- Teste de gravacao (v0.97k, autorizado pelo Felipe): o console deixa o jogo gravar um
+-- arquivo na pasta dele? (Os recordes do campeonato precisam disso.) Le o que ficou da vez
+-- anterior (sobreviveu a fechar o jogo e desligar?), grava de novo e confere. So no log.
+local function gravar_em(nome)
+  local antes = "(nenhum)"
+  local f = io.open(nome, "r")
+  if f then
+    antes = f:read("a") or "?"
+    f:close()
+  end
+  local vezes = (tonumber(antes:match("vezes=(%d+)")) or 0) + 1
+  local g, erro = io.open(nome, "w")
+  if not g then return false, "nao abriu para gravar: " .. tostring(erro) .. " | antes: " .. antes end
+  g:write("vezes=" .. vezes)
+  g:close()
+  local h = io.open(nome, "r")
+  local depois = h and h:read("a") or "(nao leu)"
+  if h then h:close() end
+  return true, "antes: " .. antes .. " | depois: " .. depois
+end
+function D.gravar_teste()
+  if not (io and io.open) then
+    print("GEARX GRAVAR nao ha io.open no console")
+    return
+  end
+  for _, nome in ipairs({ "gearx_teste.txt", "/apps/1426073318/gearx_teste.txt" }) do
+    local ok, deu, msg = pcall(gravar_em, nome)
+    print("GEARX GRAVAR " .. nome .. ": " .. (ok and ((deu and "OK " or "ERRO ") .. msg) or ("falhou: " .. tostring(deu))))
+    if ok and deu then return end
+  end
+end
+
 function D.fim()
-  if D.quadros == 120 then pcall(D.arquivos) end
+  if D.quadros == 120 then
+    pcall(D.arquivos)
+    pcall(D.gravar_teste)
+  end
   if relogio then
     D.ultimo_lua = relogio() - inicio
     soma_lua = soma_lua + D.ultimo_lua

@@ -18,6 +18,13 @@ local PAGINAS = 3
 local SEGURAR = 60   -- quadros segurando o direcional para trocar de pagina
 
 function Tela.nova()
+  -- no log: todas as constantes de botao que o console tem (pode haver um START que a
+  -- documentacao nao lista)
+  for k, v in pairs(_ENV) do
+    if type(k) == "string" and (k:find("^BTN") or k:find("START") or k:find("SELECT")) then
+      print("GEARX CONSTANTE " .. k .. " = " .. tostring(v))
+    end
+  end
   return setmetatable({ pagina = 1, dir = 0, esq = 0 }, Tela)
 end
 
@@ -52,6 +59,11 @@ for nome, botao in pairs(Entrada.BOTAO) do
   end
 end
 
+-- botoes conhecidos (para achar os outros pelo numero)
+local CONHECIDOS = {}
+for _, b in ipairs(BOTOES) do CONHECIDOS[_ENV[b[2]]] = b[2] end
+local outro_botao = nil   -- ultimo botao desconhecido apertado (numero e jogador)
+
 local function pagina_controles()
   T.p("TESTE 1/3: CONTROLES", 8, 6, Cores.amarelo)
   T.p("Aperte cada botao do controle e veja qual quadrado acende.", 8, 20, Cores.branco)
@@ -70,6 +82,19 @@ local function pagina_controles()
     end
   end
   T.p("Entre parenteses: o botao que o jogo acha que e (controle Super Nintendo).", 8, 176, Cores.cinza)
+  -- botoes pelo numero (0 a 31): acha botoes que o jogo nao conhece, como o START
+  for id = 0, 31 do
+    if not CONHECIDOS[id] then
+      for j = 0, 2 do
+        local ok, apertou = pcall(ui.btnp, id, j)
+        if ok and apertou then
+          outro_botao = id .. " (J" .. (j + 1) .. ")"
+          print("GEARX BOTAO numero " .. id .. " J" .. (j + 1))
+        end
+      end
+    end
+  end
+  T.p("Outro botao (START?): " .. (outro_botao or "nenhum ainda"), 8, 190, outro_botao and Cores.amarelo or Cores.cinza)
 end
 
 local TOPO, FUNDO = 44, 140   -- faixa vertical dos blocos (96 linhas)
