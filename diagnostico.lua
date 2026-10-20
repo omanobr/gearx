@@ -76,6 +76,15 @@ function D.arquivos()
   local e = carros.ka and carros.ka.vermelho and carros.ka.vermelho.reto1
   local campos = {}
   if type(e) == "table" then for k in pairs(e) do campos[#campos + 1] = tostring(k) end end
+  -- quantas cores a paleta do console tem (o servidor so acumula cores; o limite e 256)
+  local maior, n = 0, 0
+  for k in pairs(Palette) do
+    if type(k) == "number" then
+      n = n + 1
+      if k > maior then maior = k end
+    end
+  end
+  print(string.format("GEARX PALETA cores=%d maior indice=%d #Palette=%d", n, maior, #Palette))
   print(string.format("GEARX ARQUIVOS imagens=%d (limpo: 680) pastas em img/carros=%d (limpo: 5) "
     .. "fusca/amarelo=%d (limpo: 21) resto v0.9=%s resto v0.97b=%s imagem=%s{%s}",
     imagens(Sprites, type(e) == "table"), chaves(carros), chaves(fa), tostring(carros.amarelo ~= nil),
