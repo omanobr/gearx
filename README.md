@@ -2,7 +2,7 @@
 
 Corrida pseudo-3D no estilo do Top Gear (Super Nintendo) para o console **Lupi**: de 1 a 3 jogadores em tela dividida, 5 pistas pelo litoral, do amanhecer à noite de lua cheia, com música própria, nitro e pilotos controlados pelo computador.
 
-- **6 carros** com jeitos diferentes de dirigir (velocidade, aceleração e curvas).
+- **5 carros brasileiros** com jeitos diferentes de dirigir (velocidade, aceleração e curvas): Ka, Fusca, Gol bola, Monza e o **lendário Uno com escada**, o melhor em tudo. Cada jogador corre com o carro pintado na sua cor.
 - **Nitro**: começa com 3; latas de nitro aparecem na pista só na frente de quem está atrás (quem lidera não pega).
 - **Curvas**: a velocidade cai nas curvas, e numa curva forte e longa, a toda, o carro é jogado para fora da pista.
 - **Dano**: batidas diminuem a velocidade máxima e a aceleração (barra DANO no painel).

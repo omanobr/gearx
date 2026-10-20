@@ -34,9 +34,9 @@ local TX1, TY1, TW1, TX2, TY2, TW2, TCLARO, TIDX = {}, {}, {}, {}, {}, {}, {}, {
 -- carros visiveis nesta visao
 local VIS_N, VIS_C = {}, {}
 
--- sprites dos carros: SPR[cor].reto[nivel], .esq[nivel], .dir[nivel]
--- Tamanhos vem de Arte.carros.tamanho (TAM.reto[nivel] = { largura, altura }): no console,
--- as imagens de Sprites nao trazem largura e altura (so servem para passar ao ui.spr).
+-- sprites dos carros: SPR[modelo][cor].reto[nivel], .esq[nivel], .dir[nivel]
+-- Tamanhos vem de Arte.carros.tamanho (TAM[modelo].reto[nivel] = { largura, altura }): no
+-- console, as imagens de Sprites nao trazem largura e altura (so servem para o ui.spr).
 local SPR, LARGURA_NIVEL1 = {}, 1
 local TAM
 local CHAMA = { g = {}, p = {} }   -- chamas do nitro (ferramentas/gerar_efeitos.py)
@@ -58,17 +58,19 @@ function R.preparar()
     for q = 1, Efeitos.quadros_chama do lista[q] = Sprites.img.efeitos["chama_" .. tam .. q] end
   end
   TAM = Arte.carros.tamanho
-  for _, cor in ipairs(Arte.carros.cores) do
-    local pasta = Sprites.img.carros[cor]
-    local t = { reto = {}, esq = {}, dir = {} }
-    for k = 1, Arte.carros.niveis do
-      t.reto[k] = pasta["reto" .. k]
-      t.esq[k] = pasta["esq" .. k]
-      t.dir[k] = pasta["dir" .. k]
+  for _, modelo in ipairs(Arte.carros.modelos) do
+    SPR[modelo] = {}
+    for cor, pasta in pairs(Sprites.img.carros[modelo]) do
+      local t = { reto = {}, esq = {}, dir = {} }
+      for k = 1, Arte.carros.niveis do
+        t.reto[k] = pasta["reto" .. k]
+        t.esq[k] = pasta["esq" .. k]
+        t.dir[k] = pasta["dir" .. k]
+      end
+      SPR[modelo][cor] = t
     end
-    SPR[cor] = t
   end
-  LARGURA_NIVEL1 = TAM.reto[1][1]
+  LARGURA_NIVEL1 = TAM[Arte.carros.modelos[1]].reto[1][1]   -- igual em todos os modelos
   for nome, f in pairs(Arte.fundos) do
     for _, p in ipairs({ f, f.baixo }) do   -- panoramica inteira e a versao baixa (telas divididas)
       p.sprites, p.inicio = {}, {}
@@ -690,13 +692,13 @@ function R.visao(corrida, carro, v, quadro)
           local largura = s * larg_carro
           if largura >= 3 then
             local k = nivel(largura)
-            local tam = TAM.reto[k]
+            local tam = TAM[outro.modelo].reto[k]
             local w, h = tam[1], tam[2]
             local cx, cy = floor(sx - w / 2), floor(sy - h)
             -- so se aparecer: fora da tela (ou todo atras do morro) nao manda nada ao console
             -- (carros atras da camera dariam coordenadas gigantes)
             if cx < W and cx + w > 0 and cy < recorte and cy + h > 0 then
-              R.spr(SPR[outro.cor].reto[k], cx, cy)
+              R.spr(SPR[outro.modelo][outro.cor].reto[k], cx, cy)
             end
           end
           vc = vc + 1
@@ -713,10 +715,10 @@ function R.visao(corrida, carro, v, quadro)
   -- 4) o carro do jogador
   if R.sem.carros then return end
   local k = nivel(C.CARRO_LARGURA / C.CAM_ALTURA * hw)
-  local vistas = SPR[carro.cor]
+  local vistas, tamanhos = SPR[carro.modelo][carro.cor], TAM[carro.modelo]
   local vista = "reto"   -- virando so se existir a vista de curva neste tamanho
   if carro.direcao < 0 and vistas.esq[k] then vista = "esq" elseif carro.direcao > 0 and vistas.dir[k] then vista = "dir" end
-  local spr, sw, sh = vistas[vista][k], TAM[vista][k][1], TAM[vista][k][2]
+  local spr, sw, sh = vistas[vista][k], tamanhos[vista][k][1], tamanhos[vista][k][2]
   local tremor = 0
   if carro.vel > 0 then tremor = (quadro // 3) % 2 end
   if math.abs(carro.x) > 1 and carro.vel > 0 then tremor = tremor + (quadro // 2) % 2 end

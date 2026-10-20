@@ -100,7 +100,7 @@ end
 -- Pagina 3: a letra vem antes do desenho; a ordem vai do mais seguro ao mais suspeito.
 local function pagina_imagens()
   T.p("TESTE 3/3: IMAGENS. Se travar, anote a ULTIMA letra que apareceu.", 8, 6, Cores.amarelo)
-  local carro, pano = Sprites.img.carros, Sprites.img.fundos
+  local carro, pano = Sprites.img.carros.ka, Sprites.img.fundos
   local function celula(k, letra, texto)
     local x, y = 10 + ((k - 1) % 3) * 158, 30 + ((k - 1) // 3) * 110
     T.grande(letra, x, y, 2, Cores.branco)

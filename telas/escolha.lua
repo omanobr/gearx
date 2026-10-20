@@ -1,5 +1,6 @@
 -- Escolha dos carros. Cada jogador, com o seu controle, troca de carro com esquerda/direita
--- e confirma. Dois jogadores nunca ficam no mesmo carro. Quando todos confirmam, comeca a
+-- e confirma. O carro aparece pintado na cor do jogador (J1 vermelho, J2 azul, J3 amarelo),
+-- entao dois jogadores podem escolher o mesmo modelo. Quando todos confirmam, comeca a
 -- corrida. Os carros e o jeito de cada um dirigir estao em carros.lua.
 local Cores = require "cores"
 local T = require "texto"
@@ -33,23 +34,10 @@ function Tela.nova(opcoes)
   local self = setmetatable({ t = 0, opcoes = opcoes, escolha = {}, pronto = {} }, Tela)
   local anteriores = Jogo.opcoes.carros or {}
   for j = 1, opcoes.jogadores do
-    self.escolha[j] = self:livre(j, anteriores[j] or j, 1)   -- comeca no carro da ultima vez
+    self.escolha[j] = math.min(anteriores[j] or j, #Carros)   -- comeca no carro da ultima vez
     self.pronto[j] = false
   end
   return self
-end
-
--- o carro k, ou o proximo no sentido "passo", que nenhum outro jogador esta usando
-function Tela:livre(j, k, passo)
-  for _ = 1, #Carros do
-    local ocupado = false
-    for outro, e in ipairs(self.escolha) do
-      if outro ~= j and e == k then ocupado = true end
-    end
-    if not ocupado then return k end
-    k = (k - 1 + passo) % #Carros + 1
-  end
-  return k
 end
 
 function Tela:atualizar()
@@ -70,7 +58,7 @@ function Tela:atualizar()
     local p = j - 1
     if not self.pronto[j] then
       local d = (Entrada.dir_de(p) and 1 or 0) - (Entrada.esq_de(p) and 1 or 0)
-      if d ~= 0 then self.escolha[j] = self:livre(j, (self.escolha[j] - 1 + d) % #Carros + 1, d) end
+      if d ~= 0 then self.escolha[j] = (self.escolha[j] - 1 + d) % #Carros + 1 end
       if Entrada.confirmar_de(p) then
         self.pronto[j] = true
       elseif Entrada.voltar_de(p) then
@@ -91,26 +79,30 @@ local function coluna(self, j, x0, larg)
   local pronto = self.pronto[j]
   ui.rectfill(x0 + 5, 40, x0 + larg - 6, 246, Cores.painel)
   T.p_centro("JOGADOR " .. j, cx, 46, Cores.jogador[j])
-  local tam = Arte.carros.tamanho.reto[1]
-  R.spr(Sprites.img.carros[modelo.cor].reto1, cx - tam[1] // 2, 62)
+  -- o carro na cor do jogador, com a base sempre na mesma linha (o Uno e mais alto: escada)
+  local tam = Arte.carros.tamanho[modelo.modelo].reto[1]
+  R.spr(Sprites.img.carros[modelo.modelo][Arte.carros.cores_jogador[j]].reto1, cx - tam[1] // 2, 142 - tam[2])
   if not pronto then
-    T.grande("<", x0 + 11, 80, 2, Cores.branco)
-    T.grande(">", x0 + larg - 23, 80, 2, Cores.branco)
+    T.grande("<", x0 + 11, 96, 2, Cores.branco)
+    T.grande(">", x0 + larg - 23, 96, 2, Cores.branco)
   end
-  T.grande_centro(modelo.nome, cx, 122, 2, pronto and Cores.verde or Cores.amarelo, Cores.preto)
-  T.p_centro(modelo.texto, cx, 142, Cores.cinza)
+  T.grande_centro(modelo.nome, cx, 148, 2, pronto and Cores.verde or Cores.amarelo, Cores.preto)
+  -- lendario: o texto pisca em amarelo e laranja
+  local cor_texto = Cores.cinza
+  if modelo.lendario then cor_texto = (self.t // 15) % 2 == 0 and Cores.amarelo or Cores.laranja end
+  T.p_centro(modelo.texto, cx, 168, cor_texto)
   local barra = larg - 34
   for a, atributo in ipairs(ATRIBUTOS) do
-    local y = 158 + (a - 1) * 22
+    local y = 180 + (a - 1) * 18
     T.p(atributo[1], x0 + 17, y, Cores.branco)
-    ui.rectfill(x0 + 17, y + 10, x0 + 17 + barra, y + 15, Cores.cinza_escuro)
+    ui.rectfill(x0 + 17, y + 9, x0 + 17 + barra, y + 13, Cores.cinza_escuro)
     local cheio = (barra * fracao(atributo[2], modelo[atributo[2]])) // 1
-    ui.rectfill(x0 + 17, y + 10, x0 + 17 + cheio, y + 15, Cores.laranja)
+    ui.rectfill(x0 + 17, y + 9, x0 + 17 + cheio, y + 13, modelo.lendario and Cores.amarelo or Cores.laranja)
   end
   if pronto then
-    T.grande_centro("PRONTO!", cx, 226, 2, Cores.verde, Cores.preto)
+    T.grande_centro("PRONTO!", cx, 232, 2, Cores.verde, Cores.preto)
   elseif (self.t // 20) % 2 == 0 then
-    T.p_centro(Entrada.NOME.confirmar .. ": ESCOLHER", cx, 230, Cores.branco)
+    T.p_centro(Entrada.NOME.confirmar .. ": ESCOLHER", cx, 236, Cores.branco)
   end
 end
 

@@ -12,8 +12,6 @@ local Corrida = {}
 Corrida.__index = Corrida
 
 local NOMES = { "RAIO", "FAISCA", "TROVAO", "COMETA", "TUFAO", "BALA", "FOGUETE" }
--- cores dos carros do computador, em ordem de preferencia (sem as dos jogadores)
-local CORES_CPU = { "prata", "ciano", "verde", "laranja", "roxo", "vermelho", "azul", "amarelo" }
 local FAIXAS_X = { -2 / 3, 0, 2 / 3 }   -- centro de cada faixa
 local LARGADA = 180                      -- quadros de contagem antes do "VAI!"
 
@@ -38,13 +36,11 @@ function Corrida.nova(op)
   self.itens, self.item_seg = {}, {}   -- nitros na pista (lista e por segmento, para desenhar)
   self.prox_item = C.ITEM_INTERVALO
 
-  -- carro de cada jogador (indice em carros.lua) e cores que sobram para o computador
+  -- carro de cada jogador (indice em carros.lua), pintado na cor do jogador. O computador
+  -- usa outros modelos e cores (dados_arte.lua): modelo e cor nunca repetem juntos.
   local escolhidos = op.carros or { 1, 2, 3 }
-  local usadas, cores_cpu = {}, {}
-  for j = 1, op.jogadores do usadas[Carros[escolhidos[j]].cor] = true end
-  for _, cor in ipairs(CORES_CPU) do
-    if not usadas[cor] then cores_cpu[#cores_cpu + 1] = cor end
-  end
+  local A = Arte.carros
+  local cores_jogador, modelos_cpu, cores_cpu = A.cores_jogador, A.modelos_cpu, A.cores_cpu
 
   -- grid: computador na frente, jogadores atras (como no Top Gear)
   local ordem = {}
@@ -66,12 +62,13 @@ function Corrida.nova(op)
     if humano then
       local modelo = Carros[escolhidos[k]]
       carro.humano, carro.jogador = true, k - 1
-      carro.cor, carro.nome = modelo.cor, "J" .. k
+      carro.modelo, carro.cor, carro.nome = modelo.modelo, cores_jogador[k], "J" .. k
       carro.mult_vel, carro.mult_acel, carro.aderencia = modelo.vel, modelo.acel, modelo.aderencia
       carro.auto = op.autopiloto and op.autopiloto[k] or false
       carro.habilidade = 0.97
       self.humanos[k] = carro
     else
+      carro.modelo = modelos_cpu[(k - 1) % #modelos_cpu + 1]
       carro.cor, carro.nome = cores_cpu[(k - 1) % #cores_cpu + 1], NOMES[k]
       carro.habilidade = 0.84 + 0.11 * ((k * 7) % 8) / 7
     end

@@ -5,6 +5,13 @@
 local C = require "config"
 local Corrida = require "corrida"
 local R = require "render"
+local Carros = require "carros"
+
+-- o carro da demonstracao: o lendario (o Uno com a escada)
+local LENDARIO = 1
+for k, c in ipairs(Carros) do
+  if c.lendario then LENDARIO = k end
+end
 
 local Demo = {}
 
@@ -21,7 +28,7 @@ local quadro = 0
 function Demo.iniciar(pista)
   pista = pista or pista_atual or 1
   if corrida and pista == pista_atual then return end
-  corrida = Corrida.nova({ jogadores = 1, pista = pista, voltas = 99, autopiloto = { true } })
+  corrida = Corrida.nova({ jogadores = 1, pista = pista, voltas = 99, autopiloto = { true }, carros = { LENDARIO } })
   corrida.estado, corrida.largada = "correndo", 0   -- sem contagem: ja sai acelerando
   pista_atual = pista
 end
