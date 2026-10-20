@@ -67,7 +67,7 @@ local TESTES = {
   end },
   { "300 TILES, 2 FOLHAS", function()
     fundo()
-    local a, b = Sprites.img.estrada.l128, Sprites.img.estrada.l256_1
+    local a, b = Sprites.img.estrada.l128, Sprites.img.estrada.l64
     for k = 0, 149 do
       ui.tile(a, (k % 64) * 2, 240, 40 + k)
       ui.tile(b, (k % 32) * 2, 0, 40 + k)
