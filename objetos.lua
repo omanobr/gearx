@@ -37,12 +37,13 @@ local LUZ = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }   -- padrao xadre
 -- na drawlist do aparelho, que aceita 18 KB por quadro) e pulamos os que somem.
 local MINIMO_PX = 3    -- objetos mais baixos que isto nao sao desenhados
 local SIMPLES_PX = 14  -- abaixo desta altura, versao simplificada
+local MEDIO_PX = 40    -- coqueiro: abaixo desta altura, versao de meia distancia
 
 local function poste(o, sx, sy, kx, ky, noite)
   local h = 1500 * ky
   if h < MINIMO_PX then return end
   ret(sx - 25 * kx, sy - h, sx + 25 * kx, sy, Cores.poste)
-  local lado = o.x > 0 and -1 or 1          -- o braco aponta para a pista
+  local lado = -o.lado                      -- o braco aponta para a pista
   if h < SIMPLES_PX then
     if noite then   -- longe, de noite: so o ponto de luz da lampada
       local ax = sx + lado * 330 * kx
@@ -61,31 +62,43 @@ local function poste(o, sx, sy, kx, ky, noite)
   end
 end
 
--- folhas: pares de pontas (dx1, dy1, dx2, dy2) a partir do topo do tronco
+-- folhas: pares de pontas (dx1, dy1, dx2, dy2) a partir do topo do tronco e a cor. Na ordem
+-- em que entram no detalhe: as 2 de baixo, a de cima, as 2 do meio.
 local FOLHAS = {
-  { -650, 160, -480, 330, "folha" }, { 650, 160, 480, 330, "folha" },
-  { -560, -90, -420, 60, "folha_clara" }, { 560, -90, 420, 60, "folha_clara" },
-  { -160, -280, 160, -280, "folha_clara" },
+  { -650, 160, -480, 330, Cores.folha }, { 650, 160, 480, 330, Cores.folha },
+  { -160, -280, 160, -280, Cores.folha_clara },
+  { -560, -90, -420, 60, Cores.folha_clara }, { 560, -90, 420, 60, Cores.folha_clara },
 }
+local TRONCO = Cores.tronco
 
+-- Coqueiro em 3 niveis de detalhe (LOD), pela altura na tela:
+--   longe (menos de SIMPLES_PX): tronco de 1 linha e as 2 folhas de baixo (3 comandos)
+--   meia distancia (menos de MEDIO_PX): tronco de 1 triangulo e 3 folhas (4 comandos)
+--   perto: tronco de 2 triangulos e as 5 folhas (7 comandos)
+-- As contas ficam aqui mesmo (sem chamar tri): roda para cada coqueiro em todo quadro.
 local function palmeira(o, sx, sy, kx, ky)
   local h = 1400 * ky
   if h < MINIMO_PX then return end
-  local tx, ty = sx + (o.x > 0 and 1 or -1) * 140 * kx, sy - h
+  local trisfill = ui.trisfill
+  local tx, ty = sx + o.lado * 140 * kx, sy - h
+  local txi, tyi, syi = tx // 1, ty // 1, sy // 1
+  local folhas
   if h < SIMPLES_PX then
-    -- longe: tronco e as duas folhas de baixo (3 comandos em vez de 7)
-    ui.line(floor(sx), floor(sy), floor(tx), floor(ty), Cores.tronco)
-    for k = 1, 2 do
-      local f = FOLHAS[k]
-      tri(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores.folha)
-    end
-    return
+    ui.line(sx // 1, syi, txi, tyi, TRONCO)
+    folhas = 2
+  elseif h < MEDIO_PX then
+    trisfill((sx - 45 * kx) // 1, syi, (sx + 45 * kx) // 1, syi, txi, tyi, TRONCO)
+    folhas = 3
+  else
+    local a, b = (sx - 45 * kx) // 1, (sx + 45 * kx) // 1
+    local c, d = (tx + 25 * kx) // 1, (tx - 25 * kx) // 1
+    trisfill(a, syi, b, syi, c, tyi, TRONCO)
+    trisfill(a, syi, c, tyi, d, tyi, TRONCO)
+    folhas = 5
   end
-  tri(sx - 45 * kx, sy, sx + 45 * kx, sy, tx + 25 * kx, ty, Cores.tronco)
-  tri(sx - 45 * kx, sy, tx + 25 * kx, ty, tx - 25 * kx, ty, Cores.tronco)
-  for k = 1, #FOLHAS do
+  for k = 1, folhas do
     local f = FOLHAS[k]
-    tri(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores[f[5]])
+    trisfill(txi, tyi, (tx + f[1] * kx) // 1, (ty + f[2] * ky) // 1, (tx + f[3] * kx) // 1, (ty + f[4] * ky) // 1, f[5])
   end
 end
 
@@ -135,6 +148,7 @@ local DESENHOS = { poste = poste, palmeira = palmeira, placa = placa, arbusto = 
 local ALCANCE = { poste = 600, palmeira = 800, placa = 260, arbusto = 400, pedra = 260, portico = 1500 }
 local ALTURA = { poste = 1550, palmeira = 1700, placa = 760, arbusto = 700, pedra = 280, portico = 1800 }
 local ESCALA_MAX = 8   -- mais perto que isto, o objeto esta praticamente dentro da camera
+O.ESCALA_MAX = ESCALA_MAX
 
 -- Nitro na pista: uma lata (azul, faixa branca, tampa vermelha) feita so de retangulos.
 -- Pisca para chamar atencao. (sx, sy) = base na tela; W x H = tamanho da visao.
@@ -150,11 +164,21 @@ function O.nitro(sx, sy, kx, ky, W, H, quadro)
   end
 end
 
+-- Dados de cada objeto que nao mudam, guardados nele quando a pista e montada (render.lua):
+-- a funcao que o desenha, ate onde vai para cima e para os lados, o lado da pista e se e
+-- enfeite. Assim o desenho de cada quadro nao procura nada em tabelas.
+function O.preparar(o)
+  o.desenho = DESENHOS[o.tipo]
+  o.alt, o.alc = ALTURA[o.tipo] or 0, ALCANCE[o.tipo] or 0
+  o.lado = o.x > 0 and 1 or -1
+  o.enfeite = O.enfeite[o.tipo] or false
+end
+
 -- (sx, sy) = base do objeto na tela; W x H = tamanho da visao
 function O.desenhar(o, sx, sy, kx, ky, noite, W, H)
-  local f = DESENHOS[o.tipo]
-  if not f or kx > ESCALA_MAX or sy < 0 or sy - ALTURA[o.tipo] * ky > H then return end
-  local alcance = ALCANCE[o.tipo] * kx
+  local f = o.desenho
+  if not f or kx > ESCALA_MAX or sy < 0 or sy - o.alt * ky > H then return end
+  local alcance = o.alc * kx
   if sx + alcance < 0 or sx - alcance > W then return end
   f(o, sx, sy, kx, ky, noite)
 end

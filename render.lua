@@ -31,8 +31,9 @@ local floor, min, max, log = math.floor, math.min, math.max, math.log
 local PX1, PY1, PS1, PCLIP, PSEG = {}, {}, {}, {}, {}
 -- trapezios da estrada desta visao (bordas de perto e de longe, cor, segmento)
 local TX1, TY1, TW1, TX2, TY2, TW2, TCLARO, TIDX = {}, {}, {}, {}, {}, {}, {}, {}
--- carros visiveis nesta visao
+-- carros visiveis nesta visao; latas de nitro desta visao
 local VIS_N, VIS_C = {}, {}
+local IT_N, IT_O = {}, {}
 
 -- sprites dos carros: SPR[modelo][cor].reto[nivel], .esq[nivel], .dir[nivel]
 -- Tamanhos vem de Arte.carros.tamanho (TAM[modelo].reto[nivel] = { largura, altura }): no
@@ -43,6 +44,7 @@ local CHAMA = { g = {}, p = {} }   -- chamas do nitro (ferramentas/gerar_efeitos
 -- estrada em tiles: folha, tile e largura do tile de cada largura Z (dados_estrada.lua)
 local EF, ET, EW = {}, {}, {}
 local Z_MAX = Estrada.z_max
+local ESCALA_OBJ = Objetos.ESCALA_MAX   -- objeto mais perto que isto esta dentro da camera
 
 -- Toda imagem do jogo passa por Desenho.spr (desenho.lua)
 R.spr = Desenho.spr
@@ -290,7 +292,26 @@ local function dados_da_pista(pista)
       plano[i] = alturas[i] == alturas[prox[i]] and (plano[prox[i]] or 0) + 1 or 1
     end
   end
-  pista.prox, pista.var, pista.plano = prox, var, plano
+  -- de cada segmento, quantos segmentos ate o anterior que tem objetos (o laco dos objetos
+  -- pula os vazios); e os dados de cada objeto que nao mudam (objetos.lua)
+  local ant, ultimo = {}, nil
+  for volta = 1, 2 do
+    for i = 1, N do
+      if ultimo then
+        local d = (i - ultimo) % N
+        ant[i] = d == 0 and N or d
+      end
+      if pista.objetos[i] then ultimo = i end
+    end
+  end
+  for i = 1, N do
+    ant[i] = ant[i] or 2 * N                -- pista sem objetos
+    local lista = pista.objetos[i]
+    if lista then
+      for _, o in ipairs(lista) do Objetos.preparar(o) end
+    end
+  end
+  pista.prox, pista.var, pista.plano, pista.obj_ant = prox, var, plano, ant
 end
 
 -- Desenha a estrada de uma visao e prepara, para cada segmento n a frente (0 a dist):
@@ -508,6 +529,7 @@ function R.visao(corrida, carro, v, quadro)
 
   ui.clip(v.x, v.y, W, H)
   ui.camera(-v.x, -v.y)
+  dados_da_pista(pista)
   local f = Arte.fundos[pista.fundo]
   local p = panoramica(f, hy)
   local fim_fundo = max(0, topo_fundo(p, hy)) + p.altura
@@ -643,72 +665,97 @@ function R.visao(corrida, carro, v, quadro)
     end
   end
 
-  -- 3) objetos e carros, de longe para perto
-  local vc = 1
+  -- 3) objetos e carros, de longe para perto. So os segmentos que tem algo: o laco pula
+  --    direto de um segmento com objetos para o anterior (pista.obj_ant), e visita tambem os
+  --    das latas de nitro e dos carros. (Antes visitava os 100 segmentos, quase todos vazios.)
   local recorte = H
   local objetos, noite, larg_carro = pista.objetos, pista.noite, C.CARRO_LARGURA * hw
-  local itens = corrida.item_seg
-  local enfeite = H < C.ALTURA and Objetos.enfeite   -- telas divididas: metade dos enfeites
-  local sem_objetos = R.sem.objetos
-  local alcance_objetos = v.objetos or v.dist   -- mais longe que isto, so carros e latas de nitro
-  local PSEG_, PS1_, VIS_N_ = PSEG, PS1, VIS_N     -- locais: o laco roda para cada segmento
-  local proximo_carro = nv >= 1 and VIS_N_[1] or -1
-  for n = v.dist - 1, 1, -1 do
-    local i = PSEG_[n]
-    local lista, item = n < alcance_objetos and objetos[i], itens[i]
-    local tem_carro = n == proximo_carro
-    if lista or tem_carro or item then
-      if sem_objetos then lista, item = nil, nil end
-      if por_linhas then   -- projeta so os segmentos com algo
-        ponto(n)
-        if tem_carro then ponto(n + 1) end
+  local enfeite = H < C.ALTURA   -- telas divididas: metade dos enfeites
+  local PSEG_, PS1_, VIS_N_, ant = PSEG, PS1, VIS_N, pista.obj_ant
+  local vc = 1                                  -- proximo carro (VIS_N esta de longe para perto)
+  local no = min(v.objetos or v.dist, v.dist) - 1   -- proximo segmento com objetos
+  if R.sem.objetos then
+    no = 0
+  elseif no >= 1 and not objetos[PSEG_[no]] then
+    no = no - ant[PSEG_[no]]
+  end
+  local ni = 0                                  -- latas de nitro desta visao, de longe para perto
+  for _, it in ipairs(corrida.itens) do
+    local n = (it.seg - 1 - base) % N
+    if n >= 1 and n < v.dist then
+      ni = ni + 1
+      local j = ni
+      while j > 1 and IT_N[j - 1] < n do
+        IT_N[j], IT_O[j] = IT_N[j - 1], IT_O[j - 1]
+        j = j - 1
       end
-      local s1 = PS1_[n]
-      if s1 then
-        local px, py = PX1[n], PY1[n]
-        -- so recorta quando a base do segmento ficou atras de um morro (no plano nao precisa)
-        local clip = py > PCLIP[n] + 1 and PCLIP[n] or H
-        if clip ~= recorte then
-          ui.clip(v.x, v.y, W, max(1, clip))
-          recorte = clip
-        end
-        local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
-        if lista then
-          local pula = enfeite and PSEG[n] % 2 == 1
-          for k = 1, #lista do
-            local o = lista[k]
-            if not (pula and enfeite[o.tipo]) then
-              Objetos.desenhar(o, px + ox * o.x, py, kx, ky, noite, W, H)
-            end
+      IT_N[j], IT_O[j] = n, it
+    end
+  end
+  local ki = 1
+  while true do
+    local nc = vc <= nv and VIS_N_[vc] or 0
+    local nit = ki <= ni and IT_N[ki] or 0
+    local n = no
+    if nc > n then n = nc end
+    if nit > n then n = nit end
+    if n < 1 then break end
+    local lista = n == no and objetos[PSEG_[n]]
+    local item = n == nit and IT_O[ki]
+    local tem_carro = n == nc
+    if por_linhas then   -- projeta so os segmentos com algo
+      ponto(n)
+      if tem_carro then ponto(n + 1) end
+    end
+    local s1 = PS1_[n]
+    if s1 then
+      local px, py = PX1[n], PY1[n]
+      -- so recorta quando a base do segmento ficou atras de um morro (no plano nao precisa)
+      local clip = py > PCLIP[n] + 1 and PCLIP[n] or H
+      if clip ~= recorte then
+        ui.clip(v.x, v.y, W, max(1, clip))
+        recorte = clip
+      end
+      local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
+      -- objetos: a mesma conta de Objetos.desenhar (fora da tela ou colado na camera nao
+      -- desenha), feita aqui para nao chamar mais uma funcao por objeto
+      if lista and kx <= ESCALA_OBJ and py >= 0 then
+        local pula = enfeite and PSEG_[n] % 2 == 1
+        for k = 1, #lista do
+          local o = lista[k]
+          local desenho = o.desenho
+          if desenho and not (pula and o.enfeite) and py - o.alt * ky <= H then
+            local sx, alcance = px + ox * o.x, o.alc * kx
+            if sx + alcance >= 0 and sx - alcance <= W then desenho(o, sx, py, kx, ky, noite) end
           end
         end
-        if item then Objetos.nitro(px + ox * item.x, py, kx, ky, W, H, quadro) end
-        while vc <= nv and VIS_N[vc] == n do
-          local outro = VIS_C[vc]
-          local pct = (outro.z % SEG) / SEG
-          local s = s1 + (PS1[n + 1] - s1) * pct
-          local sx = px + (PX1[n + 1] - px) * pct + s * outro.x * larg
-          local sy = py + (PY1[n + 1] - py) * pct
-          local largura = s * larg_carro
-          if largura >= 3 then
-            local k = nivel(largura)
-            local tam = TAM[outro.modelo].reto[k]
-            local w, h = tam[1], tam[2]
-            local cx, cy = floor(sx - w / 2), floor(sy - h)
-            -- so se aparecer: fora da tela (ou todo atras do morro) nao manda nada ao console
-            -- (carros atras da camera dariam coordenadas gigantes)
-            if cx < W and cx + w > 0 and cy < recorte and cy + h > 0 then
-              R.spr(SPR[outro.modelo][outro.cor].reto[k], cx, cy)
-            end
-          end
-          vc = vc + 1
-        end
       end
-      if tem_carro then   -- os carros deste segmento saem da fila (mesmo se nao apareceram)
-        while vc <= nv and VIS_N_[vc] == n do vc = vc + 1 end
-        proximo_carro = vc <= nv and VIS_N_[vc] or -1
+      if item then Objetos.nitro(px + ox * item.x, py, kx, ky, W, H, quadro) end
+      while vc <= nv and VIS_N_[vc] == n do
+        local outro = VIS_C[vc]
+        local pct = (outro.z % SEG) / SEG
+        local s = s1 + (PS1[n + 1] - s1) * pct
+        local sx = px + (PX1[n + 1] - px) * pct + s * outro.x * larg
+        local sy = py + (PY1[n + 1] - py) * pct
+        local largura = s * larg_carro
+        if largura >= 3 then
+          local k = nivel(largura)
+          local tam = TAM[outro.modelo].reto[k]
+          local w, h = tam[1], tam[2]
+          local cx, cy = floor(sx - w / 2), floor(sy - h)
+          -- so se aparecer: fora da tela (ou todo atras do morro) nao manda nada ao console
+          -- (carros atras da camera dariam coordenadas gigantes)
+          if cx < W and cx + w > 0 and cy < recorte and cy + h > 0 then
+            R.spr(SPR[outro.modelo][outro.cor].reto[k], cx, cy)
+          end
+        end
+        vc = vc + 1
       end
     end
+    -- o que foi visitado sai da fila (carros e latas mesmo se nao apareceram)
+    while vc <= nv and VIS_N_[vc] == n do vc = vc + 1 end
+    if n == nit then ki = ki + 1 end
+    if n == no then no = no - ant[PSEG_[no]] end
   end
   if recorte ~= H then ui.clip(v.x, v.y, W, H) end
 
