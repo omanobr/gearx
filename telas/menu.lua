@@ -3,7 +3,8 @@
 --   direita : painel com a previa da pista e a explicacao da opcao escolhida
 --   em cima : GEARX e o nome da pagina; embaixo: os botoes
 -- Paginas: principal (CORRIDA, CAMPEONATO, RECORDES, OPCOES), corrida (jogadores, pista,
--- horario do dia, voltas, CORRER!) e opcoes (musica, FPS, testes). A volta para a pagina anterior; na
+-- horario do dia, voltas, CORRER!), campeonato (jogadores, voltas, COMECAR!) e opcoes (musica,
+-- FPS, testes). RECORDES abre a tabela de recordes (telas/recordes.lua). A volta para a pagina anterior; na
 -- principal, para o titulo. So usa cores e folhas de letras que o jogo ja tem.
 local C = require "config"
 local Cores = require "cores"
@@ -13,6 +14,7 @@ local Pistas = require "pistas"
 local Estrada = require "estrada"
 local R = require "render"
 local Som = require "som"
+local Rec = require "recordes"
 
 local Tela = {}
 Tela.__index = Tela
@@ -22,8 +24,8 @@ local PAGINAS = {
     titulo = "MENU",
     itens = {
       { nome = "CORRIDA", ir = "corrida" },
-      { nome = "CAMPEONATO", breve = true },
-      { nome = "RECORDES", breve = true },
+      { nome = "CAMPEONATO", ir = "campeonato" },
+      { nome = "RECORDES", acao = "recordes" },
       { nome = "OPÇÕES", ir = "opcoes" },
     },
   },
@@ -36,6 +38,15 @@ local PAGINAS = {
       { nome = "HORÁRIO", valor = "horario" },
       { nome = "VOLTAS", valor = "voltas" },
       { nome = "CORRER!", acao = "correr" },
+    },
+  },
+  campeonato = {
+    titulo = "CAMPEONATO",
+    volta = "principal",
+    itens = {
+      { nome = "JOGADORES", valor = "jogadores" },
+      { nome = "VOLTAS", valor = "voltas" },
+      { nome = "COMEÇAR!", acao = "campeonato" },
     },
   },
   opcoes = {
@@ -51,7 +62,7 @@ local PAGINAS = {
 }
 
 -- opcao escolhida em cada pagina: lembrada enquanto o jogo esta aberto
-local escolhido = { principal = 1, corrida = 1, opcoes = 1 }
+local escolhido = { principal = 1, corrida = 1, campeonato = 1, opcoes = 1 }
 
 function Tela.nova(pagina)
   return setmetatable({ pagina = PAGINAS[pagina] and pagina or "principal", t = 0 }, Tela)
@@ -101,6 +112,11 @@ function Tela:atualizar()
         jogadores = op.jogadores, pista = op.pista, voltas = op.voltas, horario = op.horario,
         autopiloto = DEV.autopiloto,
       })
+    elseif item.acao == "campeonato" then
+      local op = Jogo.opcoes
+      Jogo.ir("escolha", { jogadores = op.jogadores, voltas = op.voltas, autopiloto = DEV.autopiloto, campeonato = true })
+    elseif item.acao == "recordes" then
+      Jogo.ir("recordes", Jogo.opcoes.pista, nil, { "menu", "principal" })
     elseif item.acao then
       Jogo.ir(item.acao)
     elseif item.valor then
@@ -174,26 +190,47 @@ local function painel_pista(com_resumo)
   end
 end
 
-local EXPLICA = {
-  CAMPEONATO = { "As 5 pistas seguidas, com pontos", "por posição de chegada.", "", "Vem na próxima etapa!" },
-  RECORDES = { "Os melhores tempos de cada pista,", "com as suas iniciais (3 letras),", "como nos fliperamas.", "",
-               "Vem na próxima etapa!" },
-}
+-- as 4 pistas do campeonato, com a dificuldade de cada uma
+local function lista_campeonato(y)
+  for i, def in ipairs(Pistas) do
+    local yy = y + (i - 1) * 18
+    T.p(i .. ". " .. def.nome, PAINEL_X + 24, yy, Cores.branco)
+    T.p_direita(def.dificuldade, PAINEL_X + PAINEL_W - 24, yy, COR_DIFICULDADE[def.dificuldade] or Cores.branco)
+  end
+end
 
 -- conteudo do painel conforme a opcao escolhida
 local function painel(pagina, item, t)
   local op = Jogo.opcoes
   local y = PAINEL_Y + 166
   if pagina == "principal" then
-    if item.breve then
-      T.grande_centro("EM BREVE", PAINEL_CX, PAINEL_Y + 30, 3, Cores.amarelo)
-      linhas(EXPLICA[item.nome], PAINEL_Y + 80, Cores.branco)
+    if item.ir == "campeonato" then
+      T.grande_centro("CAMPEONATO", PAINEL_CX, PAINEL_Y + 12, 2, Cores.amarelo)
+      lista_campeonato(PAINEL_Y + 40)
+      linhas({ "Pontos por chegada: 10-8-6-5-4-3-2-1.", "Horário de cada corrida sorteado." }, PAINEL_Y + 126, Cores.cinza)
+    elseif item.acao == "recordes" then
+      local r = Rec.voltas[op.pista][1]
+      T.grande_centro("RECORDES", PAINEL_CX, PAINEL_Y + 12, 2, Cores.amarelo)
+      linhas({ "As 5 melhores voltas de cada pista e", "os 5 maiores campeonatos, com as", "iniciais de quem fez." },
+        PAINEL_Y + 44, Cores.branco)
+      linhas({ "MELHOR VOLTA NA " .. Pistas[op.pista].nome:upper() .. ":", r[1] .. "  " .. T.tempo(r[2]) .. "  " .. r[3] },
+        PAINEL_Y + 112, Cores.amarelo)
     elseif item.ir == "corrida" then
       painel_pista(true)
       linhas({ "Corrida contra 7 carros do computador." }, y, Cores.cinza)
     else
       T.grande_centro("OPÇÕES", PAINEL_CX, PAINEL_Y + 30, 3, Cores.amarelo)
       linhas({ "Música, FPS na tela e", "os testes do console." }, PAINEL_Y + 80, Cores.branco)
+    end
+  elseif pagina == "campeonato" then
+    T.grande_centro("4 CORRIDAS", PAINEL_CX, PAINEL_Y + 12, 2, Cores.amarelo)
+    lista_campeonato(PAINEL_Y + 40)
+    local jog = op.jogadores == 1 and "1 JOGADOR" or (op.jogadores .. " JOGADORES")
+    local vol = op.voltas == 1 and "1 VOLTA" or (op.voltas .. " VOLTAS")
+    linhas({ vol .. " EM CADA PISTA  -  " .. jog, "Horário de cada corrida sorteado.", "Mesmo carro nas 4 corridas." },
+      PAINEL_Y + 126, Cores.cinza)
+    if item.acao == "campeonato" and (t // 15) % 2 == 0 then
+      linhas({ "TUDO PRONTO! APERTE " .. Entrada.NOME.confirmar }, PAINEL_Y + 166, Cores.amarelo)
     end
   elseif pagina == "corrida" then
     painel_pista(true)

@@ -6,6 +6,7 @@ local Cores = require "cores"
 local T = require "texto"
 local Entrada = require "entrada"
 local Carros = require "carros"
+local Camp = require "campeonato"
 local R = require "render"
 
 local Tela = {}
@@ -48,7 +49,11 @@ function Tela:atualizar()
       local op = self.opcoes
       op.carros = { table.unpack(self.escolha) }
       Jogo.opcoes.carros = op.carros
-      Jogo.ir("corrida", op)
+      if op.campeonato then
+        Jogo.ir("corrida", Camp.opcoes(Camp.novo(op)))   -- 1a corrida do campeonato
+      else
+        Jogo.ir("corrida", op)
+      end
     end
     return
   end
@@ -62,7 +67,7 @@ function Tela:atualizar()
       if Entrada.confirmar_de(p) then
         self.pronto[j] = true
       elseif Entrada.voltar_de(p) then
-        Jogo.ir("menu", "corrida")
+        Jogo.ir("menu", self.opcoes.campeonato and "campeonato" or "corrida")
         return
       end
     elseif Entrada.voltar_de(p) then

@@ -27,6 +27,9 @@ local TELAS = {
   resultado = require "telas.resultado",
   teste = require "telas.teste",
   desempenho = require "telas.desempenho",
+  campeonato = require "telas.campeonato",
+  iniciais = require "telas.iniciais",
+  recordes = require "telas.recordes",
 }
 
 Jogo = {

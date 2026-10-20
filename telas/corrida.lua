@@ -60,6 +60,9 @@ function Tela:atualizar_pausa()
   elseif Entrada.confirmar() then
     if p.sel == 1 then self.pausa = nil
     elseif p.sel == 2 then Jogo.ir("corrida", self.opcoes)
+    elseif self.opcoes.campeonato then
+      Jogo.campeonato = nil                -- sair no meio do campeonato desiste dele
+      Jogo.ir("menu", "campeonato")
     else Jogo.ir("menu", "corrida") end
   end
 end

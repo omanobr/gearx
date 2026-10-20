@@ -55,6 +55,7 @@ function Corrida.nova(op)
       x = (g % 2 == 1) and -0.45 or 0.45,
       vel = 0, volta = -1, dist = 0, posicao = g,
       nitro = C.NITRO_QTD, nitro_t = 0, direcao = 0, fundo_x = 0, batida = 0, arrasto = 0,
+      volta_max = -1, inicio_volta = 0,          -- para medir as voltas (melhor_volta: recordes)
       terminou = false, troca = 60 + g * 25,
       dano = 0, pegou = 0,                       -- dano das batidas (0 a 1); pisca ao pegar nitro
       mult_vel = 1, mult_acel = 1, aderencia = 1,  -- jeito de dirigir (carros.lua)
@@ -269,6 +270,16 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
   if carro.z >= pista.comprimento then
     carro.z = carro.z - pista.comprimento
     carro.volta = carro.volta + 1
+    -- volta nova (cruzar a linha de novo depois de uma batida que jogou o carro para tras
+    -- nao conta): mede a volta dos jogadores (a 1a vez que cruza e a largada)
+    if carro.volta > carro.volta_max then
+      if carro.humano and carro.volta_max >= 0 and not carro.terminou then
+        local t = self.tempo - carro.inicio_volta
+        if not carro.melhor_volta or t < carro.melhor_volta then carro.melhor_volta = t end
+        print(string.format("GEARX VOLTA %s J%d volta %d %.2f s", self.pista.nome, carro.jogador + 1, carro.volta, t / 60))
+      end
+      carro.volta_max, carro.inicio_volta = carro.volta, self.tempo
+    end
     if carro.volta >= self.voltas and not carro.terminou then
       self.chegadas = self.chegadas + 1
       carro.terminou = true
