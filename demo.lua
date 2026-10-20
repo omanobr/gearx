@@ -21,14 +21,16 @@ local VISAO = {
 }
 local VISOES = { VISAO }
 
-local corrida, pista_atual = nil, nil
+local corrida, pista_atual, horario_atual = nil, nil, nil
 local quadro = 0
 
 -- Garante uma demonstracao rodando na pista pedida (se ja estiver nela, continua de onde estava).
-function Demo.iniciar(pista)
+function Demo.iniciar(pista, horario)
   pista = pista or pista_atual or 1
-  if corrida and pista == pista_atual then return end
-  corrida = Corrida.nova({ jogadores = 1, pista = pista, voltas = 99, autopiloto = { true }, carros = { LENDARIO } })
+  if corrida and pista == pista_atual and horario == horario_atual then return end
+  corrida = Corrida.nova({ jogadores = 1, pista = pista, horario = horario, voltas = 99, autopiloto = { true },
+                           carros = { LENDARIO } })
+  horario_atual = horario
   corrida.estado, corrida.largada = "correndo", 0   -- sem contagem: ja sai acelerando
   pista_atual = pista
 end

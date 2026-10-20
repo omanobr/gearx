@@ -46,9 +46,10 @@ end
 R.preparar()
 
 if DEV.cena == "corrida" then
-  Jogo.opcoes = { jogadores = DEV.jogadores or 1, pista = DEV.pista or 1, voltas = DEV.voltas or 3 }
+  Jogo.opcoes = { jogadores = DEV.jogadores or 1, pista = DEV.pista or 1, voltas = DEV.voltas or 3, horario = DEV.horario,
+                  musica = true }
   Jogo.ir("corrida", {
-    jogadores = Jogo.opcoes.jogadores, pista = Jogo.opcoes.pista, voltas = Jogo.opcoes.voltas,
+    jogadores = Jogo.opcoes.jogadores, pista = Jogo.opcoes.pista, voltas = Jogo.opcoes.voltas, horario = DEV.horario,
     autopiloto = DEV.autopiloto,
   })
 else

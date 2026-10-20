@@ -12,10 +12,11 @@ local Desenho = require "desenho"
 local O = {}
 
 -- enfeites: nas telas divididas so metade deles e desenhada (deixa o jogo mais leve)
-O.enfeite = { palmeira = true, arbusto = true, pedra = true }
+O.enfeite = { palmeira = true, arbusto = true, pedra = true, pinheiro = true, pinheiro_neve = true, cacto = true }
 
 -- largura de cada objeto para as batidas (em "unidades de pista"; nil = nao bate)
-O.largura = { poste = 0.12, palmeira = 0.18, placa = 0.3, arbusto = 0.3, pedra = 0.35 }
+O.largura = { poste = 0.12, palmeira = 0.18, placa = 0.3, arbusto = 0.3, pedra = 0.35, pinheiro = 0.2,
+              pinheiro_neve = 0.2, cacto = 0.15 }
 
 local floor, max, min = math.floor, math.max, math.min
 
@@ -136,6 +137,52 @@ local function palmeira(o, sx, sy, kx, ky)
   end
 end
 
+-- Pinheiro (floresta) e pinheiro com neve (o.neve, Castelo de Gelo): tronco e camadas de
+-- triangulos empilhadas; a de cima e mais clara (ou branca de neve). Em niveis de detalhe:
+-- longe 1 triangulo; meia distancia tronco e 2 camadas; perto tronco e 3 camadas.
+-- Camadas: { altura da base, meia largura, altura } em unidades do mundo (topo em 1700).
+local CAMADAS_2 = { { 220, 360, 800 }, { 800, 250, 900 } }
+local CAMADAS_3 = { { 220, 380, 700 }, { 650, 300, 600 }, { 1050, 210, 650 } }
+local function pinheiro(o, sx, sy, kx, ky)
+  local h = 1700 * ky
+  if h < MINIMO_PX then return end
+  local trisfill = ui.trisfill
+  local corpo = o.neve and Cores.pinheiro_neve or Cores.pinheiro
+  local topo = o.neve and Cores.neve or Cores.pinheiro_claro
+  local syi, sxi = sy // 1, sx // 1
+  if h < SIMPLES_PX then
+    trisfill((sx - 320 * kx) // 1, syi, (sx + 320 * kx) // 1, syi, sxi, (sy - h) // 1, corpo)
+    return
+  end
+  ret(sx - 40 * kx, sy - 260 * ky, sx + 40 * kx, sy, Cores.tronco)
+  local camadas = h < MEDIO_PX and CAMADAS_2 or CAMADAS_3
+  for i = 1, #camadas do
+    local c = camadas[i]
+    local base = (sy - c[1] * ky) // 1
+    trisfill((sx - c[2] * kx) // 1, base, (sx + c[2] * kx) // 1, base, sxi, (sy - (c[1] + c[3]) * ky) // 1,
+      i == #camadas and topo or corpo)
+  end
+end
+
+-- Cacto (deserto): coluna e bracos de retangulos (baratos no console). Longe so a coluna;
+-- meia distancia com 1 braco; perto com 2 e o brilho.
+local function cacto(o, sx, sy, kx, ky)
+  local h = 1100 * ky
+  if h < MINIMO_PX then return end
+  local cor = Cores.cacto
+  ret(sx - 70 * kx, sy - h, sx + 70 * kx, sy, cor)
+  if h < SIMPLES_PX then return end
+  local lado = o.lado
+  local by, bx = sy - 520 * ky, sx + lado * 210 * kx          -- braco de fora (mais alto)
+  ret(min(sx, bx), by - 50 * ky, max(sx, bx), by + 50 * ky, cor)
+  ret(bx - 45 * kx, by - 360 * ky, bx + 45 * kx, by + 50 * ky, cor)
+  if h < MEDIO_PX then return end
+  by, bx = sy - 380 * ky, sx - lado * 190 * kx                 -- braco de dentro (mais baixo)
+  ret(min(sx, bx), by - 45 * ky, max(sx, bx), by + 45 * ky, cor)
+  ret(bx - 40 * kx, by - 260 * ky, bx + 40 * kx, by + 45 * ky, cor)
+  ret(sx - 25 * kx, sy - h + 60 * ky, sx + 5 * kx, sy - 80 * ky, Cores.cacto_claro)
+end
+
 local function placa(o, sx, sy, kx, ky)
   if 760 * ky < MINIMO_PX then return end
   if 760 * ky < SIMPLES_PX then
@@ -174,13 +221,16 @@ local function portico(o, sx, sy, kx, ky)
   end
 end
 
-local DESENHOS = { poste = poste, palmeira = palmeira, placa = placa, arbusto = arbusto, pedra = pedra, portico = portico }
+local DESENHOS = { poste = poste, palmeira = palmeira, placa = placa, arbusto = arbusto, pedra = pedra, portico = portico,
+                   pinheiro = pinheiro, pinheiro_neve = pinheiro, cacto = cacto }
 
 -- Ate onde cada objeto vai para os lados e para cima (unidades do mundo). Serve para pular
 -- os que estao fora da tela: economiza desenho e evita mandar ao console coordenadas
 -- gigantes (um objeto colado na camera daria centenas de milhares de pixels).
-local ALCANCE = { poste = 600, palmeira = 800, placa = 260, arbusto = 400, pedra = 260, portico = 1500 }
-local ALTURA = { poste = 1550, palmeira = 1700, placa = 760, arbusto = 700, pedra = 280, portico = 1800 }
+local ALCANCE = { poste = 600, palmeira = 800, placa = 260, arbusto = 400, pedra = 260, portico = 1500,
+                  pinheiro = 400, pinheiro_neve = 400, cacto = 300 }
+local ALTURA = { poste = 1550, palmeira = 1700, placa = 760, arbusto = 700, pedra = 280, portico = 1800,
+                 pinheiro = 1750, pinheiro_neve = 1750, cacto = 1150 }
 local ESCALA_MAX = 8   -- mais perto que isto, o objeto esta praticamente dentro da camera
 O.ESCALA_MAX = ESCALA_MAX
 
@@ -206,6 +256,7 @@ function O.preparar(o)
   o.alt, o.alc = ALTURA[o.tipo] or 0, ALCANCE[o.tipo] or 0
   o.lado = o.x > 0 and 1 or -1
   o.enfeite = O.enfeite[o.tipo] or false
+  o.neve = o.tipo == "pinheiro_neve"
   if o.tipo == "palmeira" and IMAGENS_COQUEIRO then o.imagens = IMAGENS_COQUEIRO[o.lado] end
 end
 

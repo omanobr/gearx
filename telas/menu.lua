@@ -3,13 +3,14 @@
 --   direita : painel com a previa da pista e a explicacao da opcao escolhida
 --   em cima : GEARX e o nome da pagina; embaixo: os botoes
 -- Paginas: principal (CORRIDA, CAMPEONATO, RECORDES, OPCOES), corrida (jogadores, pista,
--- voltas, CORRER!) e opcoes (musica, FPS, testes). A volta para a pagina anterior; na
+-- horario do dia, voltas, CORRER!) e opcoes (musica, FPS, testes). A volta para a pagina anterior; na
 -- principal, para o titulo. So usa cores e folhas de letras que o jogo ja tem.
 local C = require "config"
 local Cores = require "cores"
 local T = require "texto"
 local Entrada = require "entrada"
 local Pistas = require "pistas"
+local Estrada = require "estrada"
 local R = require "render"
 local Som = require "som"
 
@@ -32,6 +33,7 @@ local PAGINAS = {
     itens = {
       { nome = "JOGADORES", valor = "jogadores" },
       { nome = "PISTA", valor = "pista" },
+      { nome = "HORÁRIO", valor = "horario" },
       { nome = "VOLTAS", valor = "voltas" },
       { nome = "CORRER!", acao = "correr" },
     },
@@ -63,7 +65,12 @@ end
 local function mudar(valor, d)
   local op = Jogo.opcoes
   if valor == "jogadores" then op.jogadores = circular(op.jogadores, d, 3)
-  elseif valor == "pista" then op.pista = circular(op.pista, d, #Pistas)
+  elseif valor == "pista" then
+    op.pista = circular(op.pista, d, #Pistas)
+    op.horario = nil                       -- cada pista comeca no horario dela
+  elseif valor == "horario" then
+    local def = Pistas[op.pista]
+    if def.horarios then op.horario = circular(op.horario or def.horario or 1, d, #def.horarios) end
   elseif valor == "voltas" then op.voltas = math.max(1, math.min(9, op.voltas + d))
   elseif valor == "musica" then
     op.musica = not op.musica
@@ -91,7 +98,7 @@ function Tela:atualizar()
     elseif item.acao == "correr" then
       local op = Jogo.opcoes
       Jogo.ir("escolha", {
-        jogadores = op.jogadores, pista = op.pista, voltas = op.voltas,
+        jogadores = op.jogadores, pista = op.pista, voltas = op.voltas, horario = op.horario,
         autopiloto = DEV.autopiloto,
       })
     elseif item.acao then
@@ -119,7 +126,7 @@ local PAINEL_CX = PAINEL_X + PAINEL_W // 2
 -- previa: o meio do panorama da pista (so os pedacos que aparecem: cada imagem desenhada e
 -- lida do cartao)
 local function previa_pista(n, x, y, w, h)
-  local f = Arte.fundos[Pistas[n].fundo]
+  local f = Arte.fundos[Estrada.horario(Pistas[n], Jogo.opcoes.horario).fundo]
   ui.clip(x, y, w, h)
   local px = math.floor(x - (f.largura - w) / 2)
   for i, spr in ipairs(f.sprites) do
@@ -135,6 +142,11 @@ local function texto_valor(valor)
   if valor == "jogadores" then return tostring(op.jogadores) end
   if valor == "pista" then return op.pista .. "/" .. #Pistas end
   if valor == "voltas" then return tostring(op.voltas) end
+  if valor == "horario" then
+    local def = Pistas[op.pista]
+    if not def.horarios then return "FIXO" end
+    return (op.horario or def.horario or 1) .. "/" .. #def.horarios
+  end
   if valor == "musica" then return op.musica and "SIM" or "NÃO" end
   if valor == "fps" then return Jogo.diagnostico_rodape and "SIM" or "NÃO" end
   return ""
@@ -145,15 +157,20 @@ local function linhas(lista, y, cor)
   for i, s in ipairs(lista) do T.p_centro(s, PAINEL_CX, y + (i - 1) * 11, cor or Cores.branco) end
 end
 
--- a pista escolhida (previa grande, nome e numero de voltas / jogadores)
+-- a pista escolhida (previa grande, nome, dificuldade e numero de voltas / jogadores)
+local COR_DIFICULDADE = { ["FÁCIL"] = Cores.verde, ["MÉDIO"] = Cores.amarelo, ["DIFÍCIL"] = Cores.vermelho }
 local function painel_pista(com_resumo)
   local op = Jogo.opcoes
+  local pista = Pistas[op.pista]
   previa_pista(op.pista, PAINEL_X + 10, PAINEL_Y + 10, PAINEL_W - 20, 96)
-  T.grande_centro(Pistas[op.pista].nome, PAINEL_CX, PAINEL_Y + 116, 2, Cores.amarelo)
+  T.grande_centro(pista.nome, PAINEL_CX, PAINEL_Y + 112, 2, Cores.amarelo)
+  local dif = pista.dificuldade or "MÉDIO"
+  T.grande_centro(dif, PAINEL_CX, PAINEL_Y + 131, 2, COR_DIFICULDADE[dif] or Cores.branco)
   if com_resumo then
+    local hora = Estrada.horario(pista, op.horario).nome
     local jog = op.jogadores == 1 and "1 JOGADOR" or (op.jogadores .. " JOGADORES")
     local vol = op.voltas == 1 and "1 VOLTA" or (op.voltas .. " VOLTAS")
-    T.p_centro(vol .. "   -   " .. jog, PAINEL_CX, PAINEL_Y + 140, Cores.branco)
+    T.p_centro(hora .. "  -  " .. vol .. "  -  " .. jog, PAINEL_CX, PAINEL_Y + 152, Cores.branco)
   end
 end
 
@@ -166,7 +183,7 @@ local EXPLICA = {
 -- conteudo do painel conforme a opcao escolhida
 local function painel(pagina, item, t)
   local op = Jogo.opcoes
-  local y = PAINEL_Y + 158
+  local y = PAINEL_Y + 166
   if pagina == "principal" then
     if item.breve then
       T.grande_centro("EM BREVE", PAINEL_CX, PAINEL_Y + 30, 3, Cores.amarelo)
@@ -190,6 +207,9 @@ local function painel(pagina, item, t)
       end
     elseif item.valor == "pista" then
       linhas({ "PISTA " .. op.pista .. " DE " .. #Pistas }, y, Cores.cinza)
+    elseif item.valor == "horario" then
+      local def = Pistas[op.pista]
+      linhas({ def.horarios and "AMANHECER, DIA, PÔR DO SOL OU NOITE" or "ESTA PISTA TEM UM HORÁRIO SÓ" }, y, Cores.cinza)
     elseif item.valor == "voltas" then
       linhas({ "De 1 a 9 voltas." }, y, Cores.cinza)
     elseif (t // 15) % 2 == 0 then
@@ -224,12 +244,13 @@ function Tela:desenhar()
     local y = ITEM_Y + (i - 1) * ITEM_PASSO
     local ativo = i == sel
     ui.rectfill(LISTA_X, y, LISTA_X + LISTA_W, y + ITEM_H, ativo and Cores.nitro or Cores.cinza_escuro)
-    local cor = item.breve and Cores.cinza or (ativo and Cores.amarelo or Cores.branco)
+    local fixo = item.valor == "horario" and not Pistas[Jogo.opcoes.pista].horarios
+    local cor = (item.breve or fixo) and Cores.cinza or (ativo and Cores.amarelo or Cores.branco)
     if ativo then T.grande(">", LISTA_X + 6, y + 6, 2, Cores.amarelo) end
     T.grande(item.nome, LISTA_X + 22, y + 6, 2, cor)
     if item.valor then
       local v = texto_valor(item.valor)
-      if ativo then v = "<" .. v .. ">" end
+      if ativo and not fixo then v = "<" .. v .. ">" end
       T.grande(v, LISTA_X + LISTA_W - 6 - T.largura(v, 2), y + 6, 2, cor)
     end
   end

@@ -27,4 +27,11 @@ return {
   folha_clara = hex(0x48B048),
   placa = hex(0xF8C838),
   pedra = hex(0x8A8478),
+  -- objetos das pistas da v0.99 (cores tiradas dos fundos novos: nao gastam cor na paleta)
+  pinheiro = hex(0x314A39),
+  pinheiro_claro = hex(0x187B31),
+  pinheiro_neve = hex(0x39395A),
+  neve = hex(0xBDE7EF),
+  cacto = hex(0x399C42),
+  cacto_claro = hex(0x5AB54A),
 }

@@ -22,7 +22,7 @@ local DT = 1 / 60
 
 function Corrida.nova(op)
   local self = setmetatable({}, Corrida)
-  self.pista = Estrada.construir(Pistas[op.pista])
+  self.pista = Estrada.construir(Pistas[op.pista], op.horario)
   self.voltas = op.voltas
   self.jogadores = op.jogadores
   self.estado = "contagem"   -- "contagem" -> "correndo" -> "fim"
@@ -72,6 +72,7 @@ function Corrida.nova(op)
       carro.cor, carro.nome = cores_cpu[(k - 1) % #cores_cpu + 1], NOMES[k]
       carro.habilidade = 0.84 + 0.11 * ((k * 7) % 8) / 7
     end
+    carro.aderencia = carro.aderencia * self.pista.aderencia   -- neve: escorrega (pistas.lua)
     carro.alvo_x = carro.x
     self.carros[#self.carros + 1] = carro
     self.ranking[#self.ranking + 1] = carro
@@ -148,7 +149,7 @@ function Corrida:ia_pensar(carro)
     if c > pior then pior = c end
   end
   local limite = 1
-  if pior > 0 then limite = min(1, 0.9 / (C.CENTRIFUGA * pior)) end
+  if pior > 0 then limite = min(1, 0.9 * carro.aderencia / (C.CENTRIFUGA * pior)) end
 
   -- computador acelera um pouco mais se estiver muito atras dos jogadores
   local ritmo = carro.habilidade

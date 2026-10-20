@@ -11,7 +11,7 @@ local Tela = {}
 Tela.__index = Tela
 
 function Tela.nova()
-  Demo.iniciar(Jogo.opcoes.pista)
+  Demo.iniciar(Jogo.opcoes.pista, Jogo.opcoes.horario)
   return setmetatable({ t = 0 }, Tela)
 end
 

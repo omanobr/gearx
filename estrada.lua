@@ -11,7 +11,15 @@ local Estrada = {}
 local function suave_entrada(a, b, p) return a + (b - a) * p * p end
 local function suave(a, b, p) return a + (b - a) * (0.5 - math.cos(p * math.pi) / 2) end
 
-function Estrada.construir(def)
+-- Horario do dia h de uma pista (pistas.lua): { nome, fundo, cores, noite }. Pistas com um
+-- horario so (as da costa) devolvem o delas.
+function Estrada.horario(def, h)
+  if def.horarios then return def.horarios[h or def.horario or 1] or def.horarios[1] end
+  return { nome = def.hora, fundo = def.fundo, cores = def.cores, noite = def.noite }
+end
+
+function Estrada.construir(def, h)
+  local hor = Estrada.horario(def, h)
   local curva, y, objetos = {}, {}, {}
   local n, altura_atual = 0, 0
   local curvas_fortes = {}
@@ -83,9 +91,11 @@ function Estrada.construir(def)
     curva = curva,
     y = y,
     objetos = objetos,
-    cores = def.cores,
-    noite = def.noite,
-    fundo = def.fundo,
+    cores = hor.cores,
+    noite = hor.noite,
+    fundo = hor.fundo,
+    aderencia = def.aderencia or 1,
+    dificuldade = def.dificuldade,
   }
 end
 
