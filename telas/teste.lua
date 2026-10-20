@@ -9,6 +9,7 @@
 --             se o console travar, a ultima letra que apareceu sem a imagem e a culpada.
 local Cores = require "cores"
 local T = require "texto"
+local Entrada = require "entrada"
 
 local Tela = {}
 Tela.__index = Tela
@@ -43,7 +44,13 @@ local BOTOES = {
   { "CIMA", "UP" }, { "BAIXO", "DOWN" }, { "ESQ", "LEFT" }, { "DIR", "RIGHT" },
   { "Z", "BTN_Z" }, { "X", "BTN_X" }, { "Q", "BTN_Q" }, { "E", "BTN_E" }, { "F", "BTN_F" }, { "G", "BTN_G" },
 }
-local SNES = { BTN_Z = "B", BTN_X = "A", BTN_Q = "X", BTN_E = "Y", BTN_F = "L", BTN_G = "R" }
+-- qual botao do controle aciona cada constante (entrada.lua: no console e diferente do simulador)
+local SNES = {}
+for nome, botao in pairs(Entrada.BOTAO) do
+  for _, b in ipairs({ "BTN_Z", "BTN_X", "BTN_Q", "BTN_E", "BTN_F", "BTN_G" }) do
+    if _ENV[b] == botao then SNES[b] = nome end
+  end
+end
 
 local function pagina_controles()
   T.p("TESTE 1/3: CONTROLES", 8, 6, Cores.amarelo)
