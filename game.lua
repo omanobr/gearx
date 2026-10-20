@@ -17,6 +17,7 @@ DEV = (ok and type(dev) == "table") and dev or {}
 local C = require "config"
 local R = require "render"
 local Som = require "som"
+local Tempo = require "tempo"
 
 local TELAS = {
   titulo = require "telas.titulo",
@@ -59,7 +60,21 @@ local Medidor = DEV.desempenho and require "medidor"
 local Diag = require "diagnostico"
 Diag.ligado = C.DIAGNOSTICO
 
-function update()
+-- DEV.lento (so no simulador): o jogo anda 1 de cada N quadros, como o console quando o
+-- quadro demora (frameskip); nos outros so redesenha a mesma cena (o simulador apaga a tela
+-- se um quadro nao desenhar nada). Serve para conferir que o jogo anda na velocidade certa.
+local pulados = 0
+
+function update(frame)
+  local anda = true
+  if DEV.lento then
+    pulados = (pulados + 1) % DEV.lento
+    anda = pulados == 0
+  end
+  if anda then
+    Tempo.atualizar(frame)
+    if DEV.lento then Tempo.passo = DEV.lento end
+  end
   Diag.inicio()
   if Medidor then Medidor.inicio() end
 
@@ -68,9 +83,10 @@ function update()
   ui.camera()
   ui.clip()
   R.novo_quadro()
-  Som.atualizar()
 
-  for _ = 1, DEV.turbo or 1 do Jogo.tela:atualizar() end   -- turbo: so no modo de teste
+  if anda then
+    for _ = 1, DEV.turbo or 1 do Jogo.tela:atualizar() end   -- turbo: so no modo de teste
+  end
   Jogo.tela:desenhar()
 
   if Medidor then

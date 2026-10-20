@@ -8,6 +8,7 @@
 -- A cada segundo mostra o resultado no rodape e manda uma linha para o log do console
 -- (print), que aparece no computador com o cabo USB (ferramentas/LOG_CONSOLE.bat).
 local Cores = require "cores"
+local Tempo = require "tempo"
 
 local D = {}
 
@@ -59,8 +60,11 @@ function D.fim()
   if fps7 then partes[#partes + 1] = string.format("STAT7 %.0f", fps7) end
   if #partes == 0 then partes[1] = "SEM RELOGIO" end
   texto = table.concat(partes, "  ")
-  if D.ligado then print(string.format("GEARX %s tela=%s mem=%dKB quadro=%d", texto, Jogo.nome_tela or "?",
-    collectgarbage("count") // 1, D.quadros)) end
+  -- passo: quantos 1/60 s o jogo anda por quadro (tempo.lua); dframe: quanto o contador de
+  -- quadros do console anda entre dois update() (1 = nao conta os quadros pulados)
+  if D.ligado then print(string.format("GEARX %s tela=%s mem=%dKB quadro=%d passo=%.2f (%s) dframe=%s",
+    texto, Jogo.nome_tela or "?", collectgarbage("count") // 1, D.quadros, Tempo.passo, Tempo.fonte,
+    Tempo.media_frame and string.format("%.2f", Tempo.media_frame) or "?")) end
   soma_lua, soma_quadro, n = 0, 0, 0
 end
 

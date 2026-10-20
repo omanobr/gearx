@@ -30,12 +30,31 @@ local function corrida(t)
   Demo.desenhar()
 end
 
-local TESTES = {
-  { "VAZIO (SO O FUNDO)", fundo },
-  { "LUA: 20 MIL INSTRUCOES", function()
+local function lua(n)
+  return function()
     fundo()
     local s = 0
-    for i = 1, 6700 do s = s + i * 2 end
+    for i = 1, n // 3 do s = s + i * 2 end   -- ~3 instrucoes por volta
+  end
+end
+
+local function corrida_parada()   -- so o desenho (a corrida nao anda)
+  Demo.desenhar()
+end
+
+-- Os testes da v0.91 que nao mudaram nada no aparelho (sem panorama, sem carros, 1 e 3
+-- imagens grandes) sairam, e tambem o de 300 tiles de 2 folhas alternadas: 300 trocas de
+-- imagem por quadro (o limite e 32) travaram a tela do console por uns segundos.
+local TESTES = {
+  { "VAZIO (SO O FUNDO)", fundo },
+  { "LUA: 20 MIL INSTRUCOES", lua(20000) },
+  { "LUA: 40 MIL INSTRUCOES", lua(40000) },
+  { "PALETA TROCADA 4 VEZES", function()
+    fundo()
+    local palset, paleta = ui.palset, Palette
+    for _ = 1, 4 do
+      for i = 1, #paleta do palset(i - 1, paleta[i]) end
+    end
   end },
   { "300 RETANGULOS 8X4", function()
     fundo()
@@ -51,10 +70,6 @@ local TESTES = {
       ui.rectfill(0, y, 479, y, k % 2 == 0 and Cores.cinza or Cores.cinza_escuro)
     end
   end },
-  { "4 RETANGULOS DA TELA TODA", function()
-    fundo()
-    for k = 1, 4 do ui.rectfill(0, 0, 479, 269, k % 2 == 0 and Cores.cinza or Cores.painel) end
-  end },
   { "300 TILES DE ESTRADA, 1 FOLHA", function()
     fundo()
     local f = Sprites.img.estrada.l128
@@ -65,29 +80,11 @@ local TESTES = {
       ui.tile(f, id + 1024, 112, 40 + k)
     end
   end },
-  { "300 TILES, 2 FOLHAS", function()
-    fundo()
-    local a, b = Sprites.img.estrada.l128, Sprites.img.estrada.l64
-    for k = 0, 149 do
-      ui.tile(a, (k % 64) * 2, 240, 40 + k)
-      ui.tile(b, (k % 32) * 2, 0, 40 + k)
-    end
-  end },
-  { "1 IMAGEM GRANDE (45 KB)", function()
-    fundo()
-    Desenho.spr(Sprites.img.fundos.amanhecer_1, 0, 40)
-  end },
-  { "3 IMAGENS GRANDES (135 KB)", function()
+  { "2 IMAGENS GRANDES (90 KB)", function()
     fundo()
     local f = Sprites.img.fundos
-    Desenho.spr(f.amanhecer_1, 0, 30)
-    Desenho.spr(f.amanhecer_2, 60, 90)
-    Desenho.spr(f.crepusculo_1, 0, 150)
-  end },
-  { "30 CARROS, MESMA IMAGEM", function()
-    fundo()
-    local img = Sprites.img.carros.vermelho.reto5
-    for k = 0, 29 do ui.spr(img, (k % 10) * 46, 40 + (k // 10) * 50) end
+    Desenho.spr(f.amanhecer_1, 0, 40)
+    Desenho.spr(f.amanhecer_2, 60, 150)
   end },
   { "30 CARROS, 2 IMAGENS", function()
     fundo()
@@ -115,14 +112,18 @@ local TESTES = {
   end },
   { "CORRIDA, ESTRADA DE TILES", corrida, { estrada = "tiles" } },
   { "CORRIDA, ESTRADA DE RETANGULOS", corrida, { estrada = "retangulos" } },
-  { "CORRIDA SEM PANORAMA", corrida, { sem = "fundo" } },
+  { "CORRIDA, RETANGULOS 2 LINHAS", corrida, { estrada = "retangulos2" } },
   { "CORRIDA SEM OBJETOS", corrida, { sem = "objetos" } },
-  { "CORRIDA SEM CARROS", corrida, { sem = "carros" } },
   { "CORRIDA SEM ESTRADA", corrida, { sem = "estrada" } },
+  { "CORRIDA PARADA (SO O DESENHO)", corrida_parada },
+  { "CORRIDA 2 JOGADORES", function(self)
+    self.cv:atualizar()
+    self.cv:desenhar()
+  end, { jogadores = 2 } },
   { "CORRIDA 3 JOGADORES", function(self)
-    self.c3:atualizar()
-    self.c3:desenhar()
-  end, { tres = true } },
+    self.cv:atualizar()
+    self.cv:desenhar()
+  end, { jogadores = 3 } },
 }
 
 local function restaurar()
@@ -147,9 +148,10 @@ function Tela:comecar()
   if not op then return end
   if op.estrada then R.estrada = op.estrada end
   if op.sem then R.sem[op.sem] = true end
-  if op.tres then
-    self.c3 = TelaCorrida.nova({ jogadores = 3, pista = Jogo.opcoes.pista, voltas = 99, autopiloto = { true, true, true } })
-    self.c3.corrida.estado, self.c3.corrida.largada = "correndo", 0
+  if op.jogadores then
+    self.cv = TelaCorrida.nova({ jogadores = op.jogadores, pista = Jogo.opcoes.pista, voltas = 99,
+      autopiloto = { true, true, true } })
+    self.cv.corrida.estado, self.cv.corrida.largada = "correndo", 0
   end
 end
 
@@ -165,7 +167,7 @@ function Tela:terminar()
   self.resultados[self.teste] = r
   print(string.format("GEARX TESTE %d %s: fps=%s quadro=%.1fms lua=%.1fms stat7=%s", self.teste, r.nome,
     r.fps and string.format("%.1f", r.fps) or "?", r.quadro, r.lua, r.stat7 and string.format("%.0f", r.stat7) or "?"))
-  self.c3 = nil
+  self.cv = nil
   self.teste = self.teste + 1
   if self.teste > #TESTES then
     restaurar()

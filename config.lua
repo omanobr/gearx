@@ -24,10 +24,13 @@ C.ESTRADA_DIVIDIDA = "retangulos"
 -- (cabo USB). Temporario, enquanto deixamos o jogo leve no aparelho.
 C.DIAGNOSTICO = true
 
--- Quantos segmentos desenhar para frente, conforme o numero de jogadores.
--- Menos segmentos = jogo mais leve. O console executa ~50-60 mil instrucoes Lua por
--- quadro: confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
-C.DISTANCIA = { 150, 100, 46 }
+-- Quantos segmentos desenhar para frente, conforme o numero de jogadores, e ate quantos
+-- segmentos aparecem os objetos da beira (palmeiras, postes...). Menos = jogo mais leve.
+-- No aparelho o Lua faz so umas 20 mil instrucoes por quadro a 60 FPS (teste de desempenho
+-- da v0.91): confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
+-- (Os ultimos segmentos ficam a 1 ou 2 pixels do horizonte: 100 em vez de 150 quase nao muda a tela.)
+C.DISTANCIA = { 100, 80, 40 }
+C.OBJETOS_DIST = { 70, 50, 30 }
 
 -- Fisica do carro (por segundo)
 C.VEL_MAX = C.SEG * 60           -- velocidade maxima: 60 segmentos por segundo

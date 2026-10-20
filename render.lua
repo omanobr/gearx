@@ -19,6 +19,7 @@ local R = {}
 R.sem = {}
 -- Estrada: "tiles" (fatias prontas, como no Super Nintendo; ferramentas/gerar_estrada.py)
 -- ou "retangulos" (3 ou 4 retangulos por linha da tela, o jeito da v0.8 e v0.9).
+-- ("retangulos2": retangulos com faixas de 2 linhas tambem em 1 jogador, para comparar)
 R.estrada = C.ESTRADA_DESENHO
 R.estrada_dividida = C.ESTRADA_DIVIDIDA
 
@@ -331,9 +332,10 @@ function R.visao(corrida, carro, v, quadro)
   if maxy > fim_fundo then ui.rectfill(0, fim_fundo, W, maxy, f.cor_mar) end
   -- Os trapezios sao desenhados de LONGE para PERTO: se o retangulo do console pintar uma
   -- linha a mais embaixo (no simulador a ultima linha nao entra), o de perto cobre a sobra.
+  local modo = H < C.ALTURA and R.estrada_dividida or R.estrada
   if R.sem.estrada then
     ui.rectfill(0, maxy, W, H, cores.grama[1])
-  elseif (H < C.ALTURA and R.estrada_dividida or R.estrada) == "tiles" then
+  elseif modo == "tiles" then
     -- primeiro a grama de todos os trapezios, depois as fatias: assim os tiles de uma folha
     -- saem seguidos (um lote so no console)
     for t = nt, 1, -1 do
@@ -348,7 +350,8 @@ function R.visao(corrida, carro, v, quadro)
       end
     end
   else
-    local passo = H < C.ALTURA and 2 or 1   -- telas divididas: faixas de 2 linhas (mais leve)
+    -- telas divididas: faixas de 2 linhas (mais leve)
+    local passo = (H < C.ALTURA or modo == "retangulos2") and 2 or 1
     for t = nt, 1, -1 do
       grama(W, cores, TCLARO[t] and 1 or 2, TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t])
       linhas_retangulos(cores, TCLARO[t], TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t], passo)
@@ -381,12 +384,13 @@ function R.visao(corrida, carro, v, quadro)
   local itens = corrida.item_seg
   local enfeite = H < C.ALTURA and Objetos.enfeite   -- telas divididas: metade dos enfeites
   local sem_objetos = R.sem.objetos
+  local alcance_objetos = v.objetos or v.dist   -- mais longe que isto, so carros e latas de nitro
   for n = v.dist - 1, 1, -1 do
     while vc <= nv and VIS_N[vc] > n do vc = vc + 1 end
     local s1 = PS1[n]
     local tem_carro = vc <= nv and VIS_N[vc] == n
     local lista, item = objetos[PSEG[n]], itens[PSEG[n]]
-    if sem_objetos then lista, item = nil, nil end
+    if sem_objetos then lista, item = nil, nil elseif n >= alcance_objetos then lista = nil end
     if s1 and (lista or tem_carro or item) then
       local px, py = PX1[n], PY1[n]
       -- so recorta quando a base do segmento ficou atras de um morro (no plano nao precisa)

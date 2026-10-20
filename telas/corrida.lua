@@ -28,6 +28,7 @@ local function visoes(n)
   for _, v in ipairs(lista) do
     v.hy = math.floor(v.h * C.HORIZONTE)
     v.dist = C.DISTANCIA[n]
+    v.objetos = C.OBJETOS_DIST[n]
   end
   return lista, painel
 end

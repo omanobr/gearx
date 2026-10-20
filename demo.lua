@@ -10,7 +10,7 @@ local Demo = {}
 
 local VISAO = {
   x = 0, y = 0, w = C.LARGURA, h = C.ALTURA,
-  hy = math.floor(C.ALTURA * C.HORIZONTE), dist = C.DISTANCIA[1],
+  hy = math.floor(C.ALTURA * C.HORIZONTE), dist = C.DISTANCIA[1], objetos = C.OBJETOS_DIST[1],
 }
 local VISOES = { VISAO }
 

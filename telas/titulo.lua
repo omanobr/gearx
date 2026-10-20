@@ -4,6 +4,7 @@ local T = require "texto"
 local Entrada = require "entrada"
 local Demo = require "demo"
 local Desenho = require "desenho"
+local Tempo = require "tempo"
 
 local Tela = {}
 Tela.__index = Tela
@@ -14,7 +15,7 @@ function Tela.nova()
 end
 
 function Tela:atualizar()
-  self.t = self.t + 1
+  self.t = self.t + Tempo.passo   -- o "APERTE" pisca no ritmo certo mesmo com o console lento
   Demo.atualizar()
   if self.t > 20 and Entrada.confirmar() then Jogo.ir("menu") end
 end
@@ -29,7 +30,7 @@ function Tela:desenhar()
   if (self.t // 30) % 2 == 0 then
     T.grande_centro("APERTE " .. Entrada.NOME.confirmar, 240, 176, 3, Cores.branco, Cores.preto)
   end
-  T.p("v0.91", 6, 258, Cores.cinza, Cores.preto)
+  T.p("v0.92", 6, 258, Cores.cinza, Cores.preto)
 end
 
 return Tela

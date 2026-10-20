@@ -6,6 +6,7 @@ local Pistas = require "pistas"
 local Entrada = require "entrada"
 local Objetos = require "objetos"
 local Carros = require "carros"
+local Tempo = require "tempo"
 
 local Corrida = {}
 Corrida.__index = Corrida
@@ -18,6 +19,8 @@ local LARGADA = 180                      -- quadros de contagem antes do "VAI!"
 
 local floor, abs, min, max = math.floor, math.abs, math.min, math.max
 local DT = 1 / 60
+-- Tudo aqui conta em 1/60 de segundo. Por quadro, o jogo anda self.passo deles (tempo.lua):
+-- 1 a 60 FPS, 2 a 30 FPS... Assim a corrida tem a velocidade certa mesmo com o console lento.
 
 function Corrida.nova(op)
   local self = setmetatable({}, Corrida)
@@ -27,6 +30,8 @@ function Corrida.nova(op)
   self.estado = "contagem"   -- "contagem" -> "correndo" -> "fim"
   self.largada = LARGADA
   self.tempo = 0
+  self.passo = 1
+  self.pensa = 0             -- os pilotos do computador pensam em quadros alternados
   self.chegadas = 0
   self.fim_em = nil
   self.carros, self.humanos, self.ranking = {}, {}, {}
@@ -122,7 +127,20 @@ function Corrida:carro_na_faixa(carro, x)
   return perto, menor
 end
 
-function Corrida:ia(carro)
+-- pensar = fazer a parte cara (olhar as curvas e os carros a frente). Nos outros quadros o
+-- piloto so segue o que decidiu (velocidade alvo e faixa): metade do trabalho no console.
+function Corrida:ia(carro, pensar)
+  carro.troca = carro.troca - self.passo
+  if pensar or not carro.ia_vel then self:ia_pensar(carro) end
+  local alvo_vel = carro.ia_vel
+  local erro = carro.alvo_x - carro.x
+  local acel = carro.vel < alvo_vel
+  local freia = carro.vel > alvo_vel * 1.1
+  local nitro = carro.humano and carro.ia_pior == 0 and carro.nitro > 0 and math.random(1, 400) == 1
+  return acel, freia, erro < -0.03, erro > 0.03, nitro
+end
+
+function Corrida:ia_pensar(carro)
   local pista = self.pista
   local i = self:segmento(carro.z)
 
@@ -144,7 +162,6 @@ function Corrida:ia(carro)
   local alvo_vel = C.VEL_MAX * ritmo * limite
 
   -- de vez em quando troca de faixa; se tem carro lento na frente, procura faixa livre
-  carro.troca = carro.troca - 1
   if carro.troca <= 0 then
     carro.troca = 150 + math.random(0, 200)
     carro.alvo_x = FAIXAS_X[math.random(1, 3)]
@@ -161,12 +178,7 @@ function Corrida:ia(carro)
       alvo_vel = min(alvo_vel, frente.vel)   -- sem espaco para passar: acompanha o carro da frente
     end
   end
-
-  local erro = carro.alvo_x - carro.x
-  local acel = carro.vel < alvo_vel
-  local freia = carro.vel > alvo_vel * 1.1
-  local nitro = carro.humano and pior == 0 and carro.nitro > 0 and math.random(1, 400) == 1
-  return acel, freia, erro < -0.03, erro > 0.03, nitro
+  carro.ia_vel, carro.ia_pior = alvo_vel, pior
 end
 
 -- ---------------------------------------------------------------------------
@@ -178,14 +190,14 @@ function Corrida:bater_objetos(carro, i)
   for _, o in ipairs(lista) do
     local largura = Objetos.largura[o.tipo]
     if largura and abs(carro.x - o.x) < (C.CARRO_X + largura) / 2 then
-      if carro.batida == 0 then
+      if carro.batida <= 0 then
         carro.dano = min(1, carro.dano + C.DANO_OBJETO * min(1, carro.vel / C.VEL_MAX))
         recuar(carro, C.SEG * 0.6, self.pista.comprimento)
         carro.batida = 30
       end
       carro.vel = min(carro.vel, C.VEL_MAX / 10)
       carro.x = carro.x - (carro.x > 0 and 0.04 or -0.04)
-      return
+      return true
     end
   end
 end
@@ -193,8 +205,10 @@ end
 function Corrida:mover(carro, acel, freia, esq, dir, nitro)
   local pista = self.pista
   local i = self:segmento(carro.z)
+  local p = self.passo
+  local dt = DT * p
 
-  if nitro and carro.nitro > 0 and carro.nitro_t == 0 then
+  if nitro and carro.nitro > 0 and carro.nitro_t <= 0 then
     carro.nitro = carro.nitro - 1
     carro.nitro_t = C.NITRO_QUADROS
   end
@@ -204,32 +218,36 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
   local vmax = C.VEL_MAX * carro.mult_vel * (1 - C.DANO_VEL * carro.dano)
     * (1 - C.CURVA_PERDA * abs(curva) / carro.aderencia)
   if carro.nitro_t > 0 then
-    carro.nitro_t = carro.nitro_t - 1
+    carro.nitro_t = max(0, carro.nitro_t - p)
     vmax = vmax * C.NITRO_VEL
   end
 
   -- a curva empurra para fora; a toda, numa curva forte e longa, so virar nao segura
   local pct = carro.vel / C.VEL_MAX
-  local dx = DT * 2 * pct
+  local dx = dt * 2 * pct
   carro.direcao = 0
   if esq then carro.x = carro.x - dx; carro.direcao = -1
   elseif dir then carro.x = carro.x + dx; carro.direcao = 1 end
   carro.x = carro.x - dx * pct * curva * C.CENTRIFUGA / carro.aderencia
 
   local acel_carro = C.ACEL * carro.mult_acel * (1 - C.DANO_ACEL * carro.dano)
-  if acel then carro.vel = carro.vel + acel_carro * DT * (carro.nitro_t > 0 and 2 or 1)
-  elseif freia then carro.vel = carro.vel - C.FREIO * DT
-  else carro.vel = carro.vel - C.SOLTO * DT end
+  if acel then carro.vel = carro.vel + acel_carro * dt * (carro.nitro_t > 0 and 2 or 1)
+  elseif freia then carro.vel = carro.vel - C.FREIO * dt
+  else carro.vel = carro.vel - C.SOLTO * dt end
 
   if abs(carro.x) > 1 then
-    if carro.vel > C.FORA_LIMITE then carro.vel = carro.vel - C.FORA_FREIO * DT end
-    self:bater_objetos(carro, i)
+    if carro.vel > C.FORA_LIMITE then carro.vel = carro.vel - C.FORA_FREIO * dt end
+    -- objetos dos segmentos por onde o carro passa neste quadro (com o console lento ele
+    -- anda mais de um segmento por quadro e passaria "por dentro" dos postes)
+    for k = 0, (carro.vel * dt) // C.SEG do
+      if self:bater_objetos(carro, (i - 1 + k) % pista.n + 1) then break end
+    end
   end
-  if carro.vel > vmax then carro.vel = max(vmax, carro.vel - C.SOLTO * DT * 2) end
+  if carro.vel > vmax then carro.vel = max(vmax, carro.vel - C.SOLTO * dt * 2) end
   if carro.vel < 0 then carro.vel = 0 end
   carro.x = max(-2.5, min(2.5, carro.x))
 
-  carro.z = carro.z + carro.vel * DT
+  carro.z = carro.z + carro.vel * dt
   if carro.z >= pista.comprimento then
     carro.z = carro.z - pista.comprimento
     carro.volta = carro.volta + 1
@@ -246,14 +264,14 @@ function Corrida:mover(carro, acel, freia, esq, dir, nitro)
   -- o fundo desliza nas curvas e volta devagar ao centro nas retas
   if carro.humano then
     local c = pista.curva[i]
-    carro.fundo_x = carro.fundo_x + c * pct * C.FUNDO_VEL
+    carro.fundo_x = carro.fundo_x + c * pct * C.FUNDO_VEL * p
     if abs(c) < 0.5 then
-      if carro.fundo_x > 0 then carro.fundo_x = max(0, carro.fundo_x - C.FUNDO_VOLTA)
-      else carro.fundo_x = min(0, carro.fundo_x + C.FUNDO_VOLTA) end
+      if carro.fundo_x > 0 then carro.fundo_x = max(0, carro.fundo_x - C.FUNDO_VOLTA * p)
+      else carro.fundo_x = min(0, carro.fundo_x + C.FUNDO_VOLTA * p) end
     end
   end
-  if carro.batida > 0 then carro.batida = carro.batida - 1 end
-  if carro.pegou > 0 then carro.pegou = carro.pegou - 1 end
+  if carro.batida > 0 then carro.batida = max(0, carro.batida - p) end
+  if carro.pegou > 0 then carro.pegou = max(0, carro.pegou - p) end
 end
 
 -- ---------------------------------------------------------------------------
@@ -284,14 +302,16 @@ end
 
 function Corrida:itens_atualizar()
   local itens, N, L = self.itens, self.pista.n, self.pista.comprimento
+  local p = self.passo
   for k = #itens, 1, -1 do
     local it = itens[k]
-    it.vida = it.vida - 1
+    it.vida = it.vida - p
     local pegou = false
     for _, h in ipairs(self.humanos) do
       local dz = (it.z - h.z) % L
       if dz > L / 2 then dz = dz - L end
-      if not pegou and abs(dz) < C.CARRO_COMP and abs(it.x - h.x) < C.CARRO_X then
+      -- (o carro pode ter passado da lata neste quadro: ate vel * tempo do quadro para tras)
+      if not pegou and dz < C.CARRO_COMP and dz > -(C.CARRO_COMP + h.vel * DT * p) and abs(it.x - h.x) < C.CARRO_X then
         if h.nitro < C.NITRO_MAX then h.nitro = h.nitro + 1 end
         h.pegou = 40
         pegou = true
@@ -299,7 +319,7 @@ function Corrida:itens_atualizar()
     end
     if pegou or it.vida <= 0 then tirar_item(self, k) end
   end
-  self.prox_item = self.prox_item - 1
+  self.prox_item = self.prox_item - p
   if self.prox_item <= 0 then
     self.prox_item = C.ITEM_INTERVALO // 2 + math.random(0, C.ITEM_INTERVALO)
     local alvo = #itens < C.ITEM_MAX and self:quem_ganha_item()
@@ -317,6 +337,7 @@ end
 function Corrida:colisoes()
   local L = self.pista.comprimento
   local meio, perto = L / 2, C.CARRO_X * 0.9
+  local dt = DT * self.passo
   local carros = self.carros
   local n = #carros
   for i = 1, n do
@@ -326,7 +347,8 @@ function Corrida:colisoes()
       if a ~= b and abs(a.x - b.x) < perto then
         local dz = b.z - a.z   -- distancia de a ate b ao longo da pista (como Corrida:distancia)
         if dz < -meio then dz = dz + L elseif dz > meio then dz = dz - L end
-        if dz >= 0 and dz < C.CARRO_COMP and a.vel >= b.vel then
+        -- dz negativo pequeno: "a" passou por dentro de "b" neste quadro (quadro longo)
+        if dz >= -(a.vel - b.vel) * dt and dz < C.CARRO_COMP and a.vel >= b.vel then
           -- "a" bateu na traseira de "b": dano conforme a diferenca de velocidade
           a.dano = min(1, a.dano + C.DANO_BATIDA * (a.vel - b.vel) / C.VEL_MAX)
           a.vel = b.vel * 0.9
@@ -358,12 +380,15 @@ function Corrida:classificar()
 end
 
 function Corrida:atualizar()
+  local p = Tempo.passo
+  self.passo = p
   if self.estado == "contagem" then
-    self.largada = self.largada - 1
+    self.largada = self.largada - p
     if self.largada <= 0 then self.estado = "correndo" end
     return
   end
-  self.tempo = self.tempo + 1
+  self.tempo = self.tempo + p
+  self.pensa = 1 - self.pensa
 
   local carros = self.carros
   for k = 1, #carros do
@@ -373,7 +398,7 @@ function Corrida:atualizar()
       local p = carro.jogador
       a, f, e, d, n = Entrada.acelera(p), Entrada.freia(p), Entrada.esquerda(p), Entrada.direita(p), Entrada.nitro(p)
     else
-      a, f, e, d, n = self:ia(carro)
+      a, f, e, d, n = self:ia(carro, k % 2 == self.pensa)
     end
     self:mover(carro, a, f, e, d, n)
   end
