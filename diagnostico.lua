@@ -91,8 +91,33 @@ function D.arquivos()
     tostring(fa ~= nil and fa.r1 ~= nil), type(e), table.concat(campos, ",")))
 end
 
+-- Tudo o que o console oferece ao jogo (v0.99c): procura alguma funcao nao documentada para
+-- gravar dados (recordes). Escreve no log os nomes globais e o que tem dentro das tabelas do
+-- sistema (as do proprio jogo e as tabelas grandes de dados ficam de fora).
+local DO_JOGO = { Jogo = true, DEV = true, Palette = true, Sprites = true, Arte = true, Efeitos = true, Fonte = true,
+                  Estrada = true, Musica = true, _G = true, package = true }
+local function nomes(t)
+  local l = {}
+  for k, v in pairs(t) do
+    l[#l + 1] = tostring(k) .. (type(v) == "function" and "()" or (type(v) == "table" and "{}" or "=" .. tostring(v)))
+  end
+  table.sort(l)
+  return table.concat(l, " ")
+end
+function D.sistema()
+  print("GEARX GLOBAIS " .. nomes(_G))
+  for k, v in pairs(_G) do
+    if type(v) == "table" and not DO_JOGO[k] and type(k) == "string" then
+      print("GEARX TABELA " .. k .. ": " .. nomes(v))
+    end
+  end
+end
+
 function D.fim()
-  if D.quadros == 120 then pcall(D.arquivos) end
+  if D.quadros == 120 then
+    pcall(D.arquivos)
+    pcall(D.sistema)
+  end
   if relogio then
     D.ultimo_lua = relogio() - inicio
     soma_lua = soma_lua + D.ultimo_lua
