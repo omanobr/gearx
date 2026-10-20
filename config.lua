@@ -37,14 +37,14 @@ C.PALETA_A_CADA = 300
 -- No aparelho o Lua faz so umas 20 mil instrucoes por quadro a 60 FPS (teste de desempenho
 -- da v0.91): confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
 -- (Os ultimos segmentos ficam a 1 ou 2 pixels do horizonte: 100 em vez de 150 quase nao muda a tela.)
-C.DISTANCIA = { 80, 80, 40 }       -- v0.97f: 1 jogador de 100 para 80
+C.DISTANCIA = { 70, 80, 40 }       -- 1 jogador: 100 ate a v0.97e, 80 na v0.97f, 70 na v0.97j
 C.OBJETOS_DIST = { 50, 50, 30 }   -- v0.97c: 1 jogador de 70 para 50
 -- Linhas duplas (v0.97h; o Felipe comparou no simulador e nao notou diferenca): na parte de
 -- baixo da estrada (a partir desta fracao da altura, contando do horizonte) cada linha
 -- calculada e desenhada duas vezes: metade das contas ali (~5% da corrida em 1 jogador); a
 -- borda da pista fica em degraus de 2 pixels perto do carro. false desliga.
 C.LINHAS_DUPLAS = true
-C.LINHAS_DUPLAS_DESDE = 0.4
+C.LINHAS_DUPLAS_DESDE = 0.25   -- v0.97j: era 0.4
 
 -- Fisica do carro (por segundo)
 C.VEL_MAX = C.SEG * 60           -- velocidade maxima: 60 segmentos por segundo

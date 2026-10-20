@@ -339,7 +339,8 @@ function Corrida:colisoes()
   local n = #carros
   for i = 1, n do
     local a = carros[i]
-    for j = 1, n do
+    -- carro do computador longe dos jogadores (Corrida:longe): ninguem ve, nao confere batida
+    if not a.longe then for j = 1, n do
       local b = carros[j]
       if a ~= b and abs(a.x - b.x) < perto then
         local dz = b.z - a.z   -- distancia de a ate b ao longo da pista (como Corrida:distancia)
@@ -357,7 +358,7 @@ function Corrida:colisoes()
           a.x = a.x + lado * 0.02
         end
       end
-    end
+    end end
   end
 end
 
@@ -410,7 +411,13 @@ function Corrida:atualizar()
     end
   end
   self:colisoes()
-  self:classificar()
+  -- a ordem da corrida (posicao no painel, lider) e refeita 15 vezes por segundo; no fim,
+  -- todo quadro (a ordem de chegada vem de carro.chegada)
+  self.classifica = (self.classifica or 0) + 1
+  if self.classifica >= 4 or self.estado ~= "correndo" then
+    self.classifica = 0
+    self:classificar()
+  end
   if self.estado == "correndo" then self:itens_atualizar() end
 
   if self.estado == "correndo" then

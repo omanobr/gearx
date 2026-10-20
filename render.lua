@@ -478,7 +478,11 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
       end
       maxy = y
     end
-    r = (not f or r >= dupla) and r - 2 or r - 1
+    -- proxima linha: retangulos (pe da tela) de 3 em 3 linhas em 1 jogador e de 2 em 2 nas
+    -- telas divididas; tiles de 2 em 2 da linha "dupla" para baixo; senao, 1
+    if not f then r = r - (retangulos and 2 or 3)
+    elseif r >= dupla then r = r - 2
+    else r = r - 1 end
   end
   while kk < dist do
     kk = kk + 1

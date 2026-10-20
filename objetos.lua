@@ -75,8 +75,8 @@ local TRONCO = Cores.tronco
 -- Coqueiros pequenos ja desenhados (ferramentas/gerar_efeitos.py), pela altura do tronco
 -- em pixels: { imagem, tile da folha (ou false), dx, dy }. IMAGENS_COQUEIRO[1] inclina para a
 -- direita, [-1] para a esquerda (espelhados). Longe vem da folha de tiles "longe".
--- (Desligado na v0.97d: o console nao aceita mais arquivos novos do GearX ate reinstalar;
--- sem Efeitos.coqueiro_longe, os coqueiros sao todos de triangulos.)
+-- (Sem Efeitos.coqueiro_longe, isto e, gerar_efeitos.py com COQUEIROS = False, os coqueiros
+-- sao todos de triangulos.)
 local IMAGENS_COQUEIRO = Efeitos.coqueiro_longe and { [1] = {}, [-1] = {} }
 if IMAGENS_COQUEIRO then
   local pasta = Sprites.img.coqueiro
