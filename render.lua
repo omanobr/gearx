@@ -329,6 +329,7 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
   local borda = ESTRADA * ZEBRA_LARG       -- ponta da zebra, a partir do centro (no mundo)
   local yb_ant, eb_ant
   local n = 0
+  local fundo = false                      -- a ultima faixa (perto do horizonte) tem cor fixa
   while true do
     local z = n * SEG - cam_off
     local yb
@@ -340,7 +341,9 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
     local eb = hw + prof_hw * (XC_[n] + borda) * inv
     if yb_ant and yb < topo then           -- faixa de yb (longe) ate topo (o que ja aparece)
       nb = nb + 1
-      BY1[nb], BY2[nb], BX[nb], BC[nb] = yb // 1, topo // 1, min(eb, eb_ant) // 1, VAR_[n - 1]
+      -- cor da faixa; a do fundo e sempre a clara (se seguisse o segmento onde comeca, trocaria
+      -- de tom inteira enquanto o carro anda: o horizonte "piscava")
+      BY1[nb], BY2[nb], BX[nb], BC[nb] = yb // 1, topo // 1, min(eb, eb_ant) // 1, fundo and 0 or VAR_[n - 1]
       topo = yb
     end
     if n >= dist then break end
@@ -348,7 +351,7 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
     -- proxima borda: onde a faixa troca de cor (ou o fim da estrada). Depois de FAIXAS_ATE
     -- segmentos cada faixa teria menos de 1 pixel de altura: o resto vira uma faixa so.
     if n >= FAIXAS_ATE then
-      n = dist
+      n, fundo = dist, true
     else
       local v = VAR_[n]
       repeat n = n + 1 until n >= dist or VAR_[n] ~= v
