@@ -416,6 +416,9 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
   local tile, lote = ui.tile, Desenho.lote
   local maxy, kk, folha = H, -1, nil
   local x_ant                              -- centro da ultima linha pintada (para os buracos)
+  -- linhas duplas (C.LINHAS_DUPLAS): da linha "dupla" para baixo, cada linha vale por duas
+  local dupla = (C.LINHAS_DUPLAS or DEV.duplas) and not retangulos and (fy * C.LINHAS_DUPLAS_DESDE) // 1
+    or 1000000
   local r, r_min = fy, (prof_fy * CAM_ALTURA / (dist * SEG)) // 1 + 1
   if not plano then
     -- subida logo a frente: as linhas sobem na tela; comeca de mais baixo para cobrir o pe
@@ -462,6 +465,11 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
               tile(f, id + 1024, xi - tw, yy)
             end
           end
+          if r >= dupla then           -- a linha de cima repete esta (sem fazer as contas dela)
+            tile(f, id, xc, y - 1)
+            tile(f, id + 1024, xc - tw, y - 1)
+            y = y - 1
+          end
         else
           linha_retangulos(cores, VAR_[k] == 0, X, LW[r], y, maxy, indice)
           folha = nil
@@ -470,7 +478,7 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
       end
       maxy = y
     end
-    r = f and r - 1 or r - 2
+    r = (not f or r >= dupla) and r - 2 or r - 1
   end
   while kk < dist do
     kk = kk + 1

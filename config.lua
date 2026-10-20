@@ -39,6 +39,12 @@ C.PALETA_A_CADA = 300
 -- (Os ultimos segmentos ficam a 1 ou 2 pixels do horizonte: 100 em vez de 150 quase nao muda a tela.)
 C.DISTANCIA = { 80, 80, 40 }       -- v0.97f: 1 jogador de 100 para 80
 C.OBJETOS_DIST = { 50, 50, 30 }   -- v0.97c: 1 jogador de 70 para 50
+-- Linhas duplas (v0.97h; o Felipe comparou no simulador e nao notou diferenca): na parte de
+-- baixo da estrada (a partir desta fracao da altura, contando do horizonte) cada linha
+-- calculada e desenhada duas vezes: metade das contas ali (~5% da corrida em 1 jogador); a
+-- borda da pista fica em degraus de 2 pixels perto do carro. false desliga.
+C.LINHAS_DUPLAS = true
+C.LINHAS_DUPLAS_DESDE = 0.4
 
 -- Fisica do carro (por segundo)
 C.VEL_MAX = C.SEG * 60           -- velocidade maxima: 60 segmentos por segundo
