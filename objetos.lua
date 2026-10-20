@@ -83,7 +83,8 @@ local function palmeira(o, sx, sy, kx, ky)
   end
   tri(sx - 45 * kx, sy, sx + 45 * kx, sy, tx + 25 * kx, ty, Cores.tronco)
   tri(sx - 45 * kx, sy, tx + 25 * kx, ty, tx - 25 * kx, ty, Cores.tronco)
-  for _, f in ipairs(FOLHAS) do
+  for k = 1, #FOLHAS do
+    local f = FOLHAS[k]
     tri(tx, ty, tx + f[1] * kx, ty + f[2] * ky, tx + f[3] * kx, ty + f[4] * ky, Cores[f[5]])
   end
 end

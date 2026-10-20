@@ -7,11 +7,14 @@ require "sprites"      -- tabela Sprites com todas as imagens
 require "dados_arte"   -- gerado por ferramentas/preparar_arte.py
 require "dados_efeitos" -- gerado por ferramentas/gerar_efeitos.py
 require "dados_musica"  -- gerado por ferramentas/compor_musica.py
+require "dados_fonte"   -- gerado por ferramentas/gerar_fonte.py
+require "dados_estrada" -- gerado por ferramentas/gerar_estrada.py
 
 -- Opcoes de teste vindas do simulador (o arquivo nao existe no console).
 local ok, dev = pcall(require, "dev_config")
 DEV = (ok and type(dev) == "table") and dev or {}
 
+local C = require "config"
 local R = require "render"
 local Som = require "som"
 
@@ -22,6 +25,7 @@ local TELAS = {
   corrida = require "telas.corrida",
   resultado = require "telas.resultado",
   teste = require "telas.teste",
+  desempenho = require "telas.desempenho",
 }
 
 Jogo = {
@@ -30,6 +34,7 @@ Jogo = {
 }
 
 function Jogo.ir(nome, ...)
+  Jogo.nome_tela = nome
   Jogo.tela = TELAS[nome].nova(...)
   collectgarbage("collect")
 end
@@ -49,8 +54,13 @@ Som.musica()
 
 -- medidor dos limites do aparelho (so no modo de teste do simulador, opcao "desempenho")
 local Medidor = DEV.desempenho and require "medidor"
+-- FPS e tempo de cada quadro, no aparelho (rodape e log do console, se C.DIAGNOSTICO;
+-- o teste de desempenho usa as medidas sempre)
+local Diag = require "diagnostico"
+Diag.ligado = C.DIAGNOSTICO
 
 function update()
+  Diag.inicio()
   if Medidor then Medidor.inicio() end
 
   local palset, paleta = ui.palset, Palette
@@ -67,4 +77,6 @@ function update()
     Medidor.fim()
     Medidor.desenhar()
   end
+  Diag.fim()
+  if Diag.ligado then Diag.desenhar() end
 end

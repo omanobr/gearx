@@ -102,16 +102,21 @@ end
 -- ---------------------------------------------------------------------------
 -- Piloto do computador (tambem usado no "piloto automatico" dos jogadores)
 -- ---------------------------------------------------------------------------
--- carro mais proximo a frente na faixa x (ou nil), e a distancia ate ele
+-- carro mais proximo a frente na faixa x (ou nil), e a distancia ate ele.
+-- (Laco com numero e a distancia calculada aqui mesmo: roda varias vezes por carro em todo
+-- quadro, e o console executa poucas instrucoes Lua por quadro.)
 local ALCANCE = 14 * C.SEG
+local FAIXA_OCUPADA = C.CARRO_X * 1.1
 function Corrida:carro_na_faixa(carro, x)
   local perto, menor = nil, ALCANCE
-  for _, outro in ipairs(self.carros) do
-    if outro ~= carro then
-      local dz = self:distancia(carro, outro)
-      if dz > -C.CARRO_COMP and dz < menor and abs(outro.x - x) < C.CARRO_X * 1.1 then
-        perto, menor = outro, dz
-      end
+  local carros, L = self.carros, self.pista.comprimento
+  local meio, cz = L / 2, carro.z
+  for k = 1, #carros do
+    local outro = carros[k]
+    if outro ~= carro and abs(outro.x - x) < FAIXA_OCUPADA then
+      local dz = outro.z - cz
+      if dz < -meio then dz = dz + L elseif dz > meio then dz = dz - L end
+      if dz > -C.CARRO_COMP and dz < menor then perto, menor = outro, dz end
     end
   end
   return perto, menor
@@ -311,10 +316,16 @@ end
 
 function Corrida:colisoes()
   local L = self.pista.comprimento
-  for _, a in ipairs(self.carros) do
-    for _, b in ipairs(self.carros) do
-      if a ~= b and abs(a.x - b.x) < C.CARRO_X * 0.9 then
-        local dz = self:distancia(a, b)
+  local meio, perto = L / 2, C.CARRO_X * 0.9
+  local carros = self.carros
+  local n = #carros
+  for i = 1, n do
+    local a = carros[i]
+    for j = 1, n do
+      local b = carros[j]
+      if a ~= b and abs(a.x - b.x) < perto then
+        local dz = b.z - a.z   -- distancia de a ate b ao longo da pista (como Corrida:distancia)
+        if dz < -meio then dz = dz + L elseif dz > meio then dz = dz - L end
         if dz >= 0 and dz < C.CARRO_COMP and a.vel >= b.vel then
           -- "a" bateu na traseira de "b": dano conforme a diferenca de velocidade
           a.dano = min(1, a.dano + C.DANO_BATIDA * (a.vel - b.vel) / C.VEL_MAX)
@@ -354,7 +365,9 @@ function Corrida:atualizar()
   end
   self.tempo = self.tempo + 1
 
-  for _, carro in ipairs(self.carros) do
+  local carros = self.carros
+  for k = 1, #carros do
+    local carro = carros[k]
     local a, f, e, d, n
     if carro.humano and not carro.auto then
       local p = carro.jogador

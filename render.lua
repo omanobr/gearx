@@ -10,8 +10,17 @@
 local C = require "config"
 local Cores = require "cores"
 local Objetos = require "objetos"
+local Desenho = require "desenho"
 
 local R = {}
+
+-- Partes que o teste de desempenho desliga para medir quanto cada uma pesa no console
+-- (telas/desempenho.lua). No jogo fica tudo ligado.
+R.sem = {}
+-- Estrada: "tiles" (fatias prontas, como no Super Nintendo; ferramentas/gerar_estrada.py)
+-- ou "retangulos" (3 ou 4 retangulos por linha da tela, o jeito da v0.8 e v0.9).
+R.estrada = C.ESTRADA_DESENHO
+R.estrada_dividida = C.ESTRADA_DIVIDIDA
 
 local floor, min, max, log = math.floor, math.min, math.max, math.log
 
@@ -29,21 +38,20 @@ local VIS_N, VIS_C = {}, {}
 local SPR, LARGURA_NIVEL1 = {}, 1
 local TAM
 local CHAMA = { g = {}, p = {} }   -- chamas do nitro (ferramentas/gerar_efeitos.py)
-local SEPARADOR
+-- estrada em tiles: folha, tile e largura do tile de cada largura Z (dados_estrada.lua)
+local EF, ET, EW = {}, {}, {}
+local Z_MAX = Estrada.z_max
 
--- Desenha uma imagem. Se for a mesma da ultima, poe antes o "separador" (1 pixel
--- transparente): no console, a mesma imagem duas vezes seguidas travou o jogo.
--- Todo desenho de imagem do jogo passa por aqui.
-local ultima_img
-function R.spr(img, x, y)
-  if img == ultima_img then ui.spr(SEPARADOR, 0, 0) end
-  ui.spr(img, x, y)
-  ultima_img = img
-end
-function R.novo_quadro() ultima_img = nil end
+-- Toda imagem do jogo passa por Desenho.spr (desenho.lua)
+R.spr = Desenho.spr
+R.novo_quadro = Desenho.novo_quadro
 
 function R.preparar()
-  SEPARADOR = Sprites.img.efeitos.separador
+  Desenho.preparar()
+  for z = 1, Z_MAX do
+    local f = Estrada.folha[z]
+    EF[z], ET[z], EW[z] = Sprites.img.estrada[Estrada.folhas[f]], Estrada.tile[z], Estrada.largura[f]
+  end
   for tam, lista in pairs(CHAMA) do
     for q = 1, Efeitos.quadros_chama do lista[q] = Sprites.img.efeitos["chama_" .. tam .. q] end
   end
@@ -87,19 +95,26 @@ local FAIXA_LARG = 1 / 60                 -- meia-largura de cada faixa branca
 local FAIXA_POS = 1 - 2 / C.FAIXAS        -- distancia do centro ate cada faixa (3 pistas: 1/3)
 assert(C.FAIXAS == 3, "segmento desenha 2 faixas brancas (3 pistas)")
 
--- Um trapezio da estrada (grama, zebra, asfalto e faixas) desenhado em FAIXAS HORIZONTAIS
--- (ui.rectfill), linha a linha, como o Top Gear: no console o triangulo (ui.trisfill) nao
--- preenche certo (a pista saia com linhas verdes e em escadinha); o retangulo sim.
--- y2 = linha de cima, y1 = linha de baixo; passo = altura de cada faixa (2 nas telas
--- divididas, para gastar menos). Coordenadas sempre inteiras (// 1), como no console.
--- O "+ 1" no fim de cada faixa e porque no simulador o rectfill nao inclui a ultima coluna/linha.
-local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice, passo)
+-- Um trapezio da estrada e desenhado em FAIXAS HORIZONTAIS, linha a linha, como o Top Gear:
+-- no console o triangulo (ui.trisfill) nao preenche certo (a pista saia com linhas verdes e
+-- em escadinha). y2 = linha de cima, y1 = linha de baixo, x/w = centro e meia-largura do
+-- asfalto em cada uma. Coordenadas sempre inteiras (// 1), como no console. O "+ 1" no fim
+-- de cada retangulo e porque no simulador o rectfill nao inclui a ultima coluna/linha.
+
+-- grama (e areia ou mar do lado direito) atras das linhas de um trapezio
+local function grama(W, cores, k, x1, y1, w1, x2, y2, w2)
   local rect = ui.rectfill
-  local k = claro and 1 or 2
   rect(0, y2, W, y1 + 1, cores.grama[k])
   if cores.direita then
-    rect(min(x1 + w1 * 7 / 6, x2 + w2 * 7 / 6) // 1, y2, W, y1 + 1, cores.direita[k])
+    rect(min(x1 + w1 * ZEBRA_LARG, x2 + w2 * ZEBRA_LARG) // 1, y2, W, y1 + 1, cores.direita[k])
   end
+end
+
+-- linhas com retangulos: zebra, asfalto e as 2 faixas brancas (passo = altura de cada
+-- faixa: 2 nas telas divididas, para gastar menos)
+local function linhas_retangulos(cores, claro, x1, y1, w1, x2, y2, w2, indice, passo)
+  local rect = ui.rectfill
+  local k = claro and 1 or 2
   local zebra, asfalto, faixa = cores.zebra[k], cores.asfalto[k], cores.faixa
   local largada = indice <= 2
   local passos = (y1 - y2) / passo
@@ -126,6 +141,47 @@ local function segmento(W, cores, claro, x1, y1, w1, x2, y2, w2, indice, passo)
     end
     x, w = x + dx, w + dw
   end
+end
+
+-- linhas com tiles: cada linha e uma fatia pronta (metade direita + a mesma espelhada),
+-- escolhida pela largura Z (do centro ate a ponta da zebra). As fatias tem cores coringa,
+-- trocadas na paleta pelas cores da pista (cores_da_estrada).
+local function linhas_tiles(cores, claro, x1, y1, w1, x2, y2, w2, indice)
+  local tile = ui.tile
+  local base = claro and 0 or 1
+  local passos = y1 - y2
+  if passos < 1 then passos = 1 end
+  local dx, dw = (x1 - x2) / passos, (w1 - w2) / passos
+  local x, w = x2, w2
+  local folha
+  for y = y2, y1 do
+    local z = (w * ZEBRA_LARG + 0.5) // 1
+    if z > Z_MAX then   -- pertinho da camera, mais larga que as fatias: retangulos
+      linhas_retangulos(cores, claro, x, y, w, x, y, w, indice, 1)
+      folha = nil
+    else
+      if z < 1 then z = 1 end
+      local f = EF[z]
+      if f ~= folha then
+        Desenho.lote(f)
+        folha = f
+      end
+      local xc, id = (x + 0.5) // 1, ET[z] + base
+      tile(f, id, xc, y)
+      tile(f, id + 1024, xc - EW[z], y)   -- + 1024: espelhado
+    end
+    x, w = x + dx, w + dw
+  end
+end
+
+-- poe as cores da pista nas 5 cores coringa das fatias da estrada
+local function cores_da_estrada(cores)
+  local palset, P, K = ui.palset, Palette, Estrada.coringa
+  palset(K.asfalto1, P[cores.asfalto[1] + 1])
+  palset(K.asfalto2, P[cores.asfalto[2] + 1])
+  palset(K.zebra1, P[cores.zebra[1] + 1])
+  palset(K.zebra2, P[cores.zebra[2] + 1])
+  palset(K.faixa, P[cores.faixa + 1])
 end
 
 -- topo do panorama numa visao com horizonte em hy
@@ -157,9 +213,10 @@ function R.fundos(pista, visoes, carros)
     local y = max(0, topo_fundo(p, v.hy))
     ui.clip(v.x, v.y, v.w, v.h)
     ui.camera(-v.x, -v.y)
+    if R.sem.fundo then y = y + p.altura end   -- teste de desempenho: so a cor do ceu
     if y > 0 then ui.rectfill(0, 0, v.w, y, f.cor_ceu) end
     local i1, i2                           -- primeiro e ultimo pedaco que aparecem
-    for i = 1, #p.sprites do
+    for i = 1, R.sem.fundo and 0 or #p.sprites do
       local x = x0 + p.inicio[i]
       if x + p.larguras[i] > 0 and x < v.w then
         i1 = i1 or i
@@ -274,14 +331,35 @@ function R.visao(corrida, carro, v, quadro)
   if maxy > fim_fundo then ui.rectfill(0, fim_fundo, W, maxy, f.cor_mar) end
   -- Os trapezios sao desenhados de LONGE para PERTO: se o retangulo do console pintar uma
   -- linha a mais embaixo (no simulador a ultima linha nao entra), o de perto cobre a sobra.
-  local passo = H < C.ALTURA and 2 or 1   -- telas divididas: faixas de 2 linhas (mais leve)
-  for t = nt, 1, -1 do
-    segmento(W, cores, TCLARO[t], TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t], passo)
+  if R.sem.estrada then
+    ui.rectfill(0, maxy, W, H, cores.grama[1])
+  elseif (H < C.ALTURA and R.estrada_dividida or R.estrada) == "tiles" then
+    -- primeiro a grama de todos os trapezios, depois as fatias: assim os tiles de uma folha
+    -- saem seguidos (um lote so no console)
+    for t = nt, 1, -1 do
+      grama(W, cores, TCLARO[t] and 1 or 2, TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t])
+    end
+    cores_da_estrada(cores)
+    for t = nt, 1, -1 do
+      if TIDX[t] <= 2 then   -- linha de largada quadriculada: retangulos
+        linhas_retangulos(cores, TCLARO[t], TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t], 1)
+      else
+        linhas_tiles(cores, TCLARO[t], TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t])
+      end
+    end
+  else
+    local passo = H < C.ALTURA and 2 or 1   -- telas divididas: faixas de 2 linhas (mais leve)
+    for t = nt, 1, -1 do
+      grama(W, cores, TCLARO[t] and 1 or 2, TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t])
+      linhas_retangulos(cores, TCLARO[t], TX1[t], TY1[t], TW1[t], TX2[t], TY2[t], TW2[t], TIDX[t], passo)
+    end
   end
 
   -- 2) quais carros estao na frente desta camera
   local nv = 0
-  for _, outro in ipairs(corrida.carros) do
+  local todos = corrida.carros
+  for c = 1, R.sem.carros and 0 or #todos do
+    local outro = todos[c]
     if outro ~= carro then
       local n = (floor(outro.z / SEG) - base) % N
       if n >= 1 and n < v.dist then
@@ -302,11 +380,13 @@ function R.visao(corrida, carro, v, quadro)
   local objetos, noite, larg_carro = pista.objetos, pista.noite, C.CARRO_LARGURA * hw
   local itens = corrida.item_seg
   local enfeite = H < C.ALTURA and Objetos.enfeite   -- telas divididas: metade dos enfeites
+  local sem_objetos = R.sem.objetos
   for n = v.dist - 1, 1, -1 do
     while vc <= nv and VIS_N[vc] > n do vc = vc + 1 end
     local s1 = PS1[n]
     local tem_carro = vc <= nv and VIS_N[vc] == n
     local lista, item = objetos[PSEG[n]], itens[PSEG[n]]
+    if sem_objetos then lista, item = nil, nil end
     if s1 and (lista or tem_carro or item) then
       local px, py = PX1[n], PY1[n]
       -- so recorta quando a base do segmento ficou atras de um morro (no plano nao precisa)
@@ -318,7 +398,8 @@ function R.visao(corrida, carro, v, quadro)
       local kx, ky, ox = s1 * hw, s1 * fy, s1 * larg
       if lista then
         local pula = enfeite and PSEG[n] % 2 == 1
-        for _, o in ipairs(lista) do
+        for k = 1, #lista do
+          local o = lista[k]
           if not (pula and enfeite[o.tipo]) then
             Objetos.desenhar(o, px + ox * o.x, py, kx, ky, noite, W, H)
           end
@@ -350,6 +431,7 @@ function R.visao(corrida, carro, v, quadro)
   if recorte ~= H then ui.clip(v.x, v.y, W, H) end
 
   -- 4) o carro do jogador
+  if R.sem.carros then return end
   local k = nivel(C.CARRO_LARGURA / C.CAM_ALTURA * hw)
   local vistas = SPR[carro.cor]
   local vista = "reto"   -- virando so se existir a vista de curva neste tamanho

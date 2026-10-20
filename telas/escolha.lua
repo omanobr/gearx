@@ -5,13 +5,11 @@ local Cores = require "cores"
 local T = require "texto"
 local Entrada = require "entrada"
 local Carros = require "carros"
-local Demo = require "demo"
 local R = require "render"
 
 local Tela = {}
 Tela.__index = Tela
 
-local MEIO_TOM = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }
 local ESPERA = 40   -- quadros entre todos confirmarem e a corrida comecar
 
 -- Barras dos atributos. Cada barra compara os carros entre si: o menor valor de um
@@ -32,7 +30,6 @@ local function fracao(campo, valor)
 end
 
 function Tela.nova(opcoes)
-  Demo.iniciar(opcoes.pista)
   local self = setmetatable({ t = 0, opcoes = opcoes, escolha = {}, pronto = {} }, Tela)
   local anteriores = Jogo.opcoes.carros or {}
   for j = 1, opcoes.jogadores do
@@ -57,7 +54,6 @@ end
 
 function Tela:atualizar()
   self.t = self.t + 1
-  Demo.atualizar()
   if self.saindo then
     self.saindo = self.saindo - 1
     if self.saindo <= 0 then
@@ -119,10 +115,7 @@ local function coluna(self, j, x0, larg)
 end
 
 function Tela:desenhar()
-  Demo.desenhar()
-  ui.fillp(table.unpack(MEIO_TOM))
-  ui.rectfill(0, 0, 480, 270, Cores.preto)
-  ui.fillp()
+  ui.rectfill(0, 0, 480, 270, Cores.preto)   -- sem a corrida de demonstracao atras (pesava no console)
   T.grande_centro("ESCOLHA SEU CARRO", 240, 10, 3, Cores.amarelo, Cores.preto)
   local n = self.opcoes.jogadores
   local larg = 480 // n

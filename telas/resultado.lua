@@ -3,16 +3,12 @@ local C = require "config"
 local Cores = require "cores"
 local T = require "texto"
 local Entrada = require "entrada"
-local Demo = require "demo"
 
 local Tela = {}
 Tela.__index = Tela
 
-local MEIO_TOM = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }
-
 function Tela.nova(corrida, opcoes)
   local self = setmetatable({ t = 0, opcoes = opcoes, linhas = {} }, Tela)
-  Demo.iniciar(opcoes.pista)
   self.pista = corrida.pista.nome
   for p, carro in ipairs(corrida.ranking) do
     self.linhas[p] = {
@@ -27,17 +23,13 @@ end
 
 function Tela:atualizar()
   self.t = self.t + 1
-  Demo.atualizar()
   if self.t < 30 then return end
   if Entrada.confirmar() then Jogo.ir("corrida", self.opcoes)
   elseif Entrada.voltar() then Jogo.ir("menu") end
 end
 
 function Tela:desenhar()
-  Demo.desenhar()
-  ui.fillp(table.unpack(MEIO_TOM))
-  ui.rectfill(0, 0, 480, 270, Cores.preto)
-  ui.fillp()
+  ui.rectfill(0, 0, 480, 270, Cores.preto)   -- sem a corrida de demonstracao atras (pesava no console)
   ui.rectfill(90, 10, 390, 260, Cores.painel)
   T.grande_centro("RESULTADO", 240, 20, 4, Cores.amarelo, Cores.preto)
   T.p_centro(self.pista, 240, 52, Cores.cinza)

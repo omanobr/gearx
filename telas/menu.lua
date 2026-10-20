@@ -3,18 +3,19 @@ local Cores = require "cores"
 local T = require "texto"
 local Entrada = require "entrada"
 local Pistas = require "pistas"
-local Demo = require "demo"
 local R = require "render"
 
 local Tela = {}
 Tela.__index = Tela
 
--- "teste" (tela de teste, temporaria) fica depois de CORRER: so se chega nela descendo
-local LINHAS = { "jogadores", "pista", "voltas", "correr", "teste" }
-local MEIO_TOM = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }
+-- "teste" e "desempenho" (telas de teste, temporarias) ficam depois de CORRER: so se chega
+-- nelas descendo
+local LINHAS = { "jogadores", "pista", "voltas", "correr", "teste", "desempenho" }
+local TESTES = { teste = "TESTE DE TELA", desempenho = "TESTE DE DESEMPENHO" }
 
+-- O menu nao tem mais a corrida de demonstracao atras do painel (quase nao aparecia e
+-- custava uma corrida inteira por quadro no console).
 function Tela.nova()
-  Demo.iniciar(Jogo.opcoes.pista)
   return setmetatable({ sel = 1, t = 0 }, Tela)
 end
 
@@ -34,11 +35,9 @@ function Tela:atualizar()
     elseif linha == "pista" then op.pista = circular(op.pista, d, #Pistas)
     elseif linha == "voltas" then op.voltas = math.max(1, math.min(9, op.voltas + d)) end
   end
-  Demo.iniciar(op.pista)   -- a demonstracao do fundo acompanha a pista escolhida
-  Demo.atualizar()
   if Entrada.confirmar() then
-    if linha == "teste" then
-      Jogo.ir("teste")
+    if TESTES[linha] then
+      Jogo.ir(linha)
     elseif linha == "correr" then
       Jogo.ir("escolha", {
         jogadores = op.jogadores, pista = op.pista, voltas = op.voltas,
@@ -59,12 +58,14 @@ local function valor(op, linha)
   return ""
 end
 
+-- previa: o meio do panorama da pista (so os pedacos que aparecem: cada imagem desenhada e
+-- lida do cartao)
 local function previa_pista(op, x, y, w, h)
   local f = Arte.fundos[Pistas[op.pista].fundo]
   ui.clip(x, y, w, h)
   local px = math.floor(x - (f.largura - w) / 2)
   for i, spr in ipairs(f.sprites) do
-    R.spr(spr, px, y + h - f.altura)
+    if px < x + w and px + f.larguras[i] > x then R.spr(spr, px, y + h - f.altura) end
     px = px + f.larguras[i]
   end
   ui.clip()
@@ -73,10 +74,7 @@ end
 
 function Tela:desenhar()
   local op = Jogo.opcoes
-  Demo.desenhar()
-  ui.fillp(table.unpack(MEIO_TOM))
   ui.rectfill(0, 0, 480, 270, Cores.preto)
-  ui.fillp()
   ui.rectfill(30, 14, 450, 256, Cores.painel)
   T.grande_centro("CORRIDA", 240, 24, 4, Cores.amarelo, Cores.preto)
 
@@ -86,8 +84,8 @@ function Tela:desenhar()
     if linha == "correr" then y = y + 70 end
     local ativo = i == self.sel
     local cor = ativo and Cores.amarelo or Cores.branco
-    if linha == "teste" then
-      T.p((ativo and "> " or "") .. "TESTE DE TELA", 40, 216, ativo and Cores.amarelo or Cores.cinza)
+    if TESTES[linha] then
+      T.p((ativo and "> " or "") .. TESTES[linha], 40, linha == "teste" and 208 or 220, ativo and Cores.amarelo or Cores.cinza)
     elseif linha == "correr" then
       if ativo and (self.t // 15) % 2 == 0 then cor = Cores.branco end
       T.grande_centro(nomes[linha], 240, y, 3, cor, Cores.preto)

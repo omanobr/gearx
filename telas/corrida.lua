@@ -8,6 +8,7 @@ local R = require "render"
 local Hud = require "hud"
 local Cores = require "cores"
 local Demo = require "demo"
+local T = require "texto"
 
 local Tela = {}
 Tela.__index = Tela
@@ -56,6 +57,7 @@ function Tela:desenhar()
   for j, carro in ipairs(corrida.humanos) do
     local v = self.visoes[j]
     R.visao(corrida, carro, v, self.quadro)
+    T.fila(v.x, v.y)   -- os numeros do painel vao para a fila (desenhados juntos no fim)
     Hud.desenhar(corrida, carro, v, varios)
   end
   ui.camera()
@@ -64,6 +66,7 @@ function Tela:desenhar()
   local W, H = C.LARGURA, C.ALTURA
   if #corrida.humanos >= 2 then ui.rectfill(0, H // 2 - 1, W, H // 2 + 1, Cores.preto) end
   if #corrida.humanos == 3 then ui.rectfill(W // 2 - 1, 0, W // 2 + 1, H, Cores.preto) end
+  T.fila_desenhar()
 end
 
 return Tela

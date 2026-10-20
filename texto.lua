@@ -1,11 +1,17 @@
 -- Texto. Duas opcoes:
 --   T.p(...)       texto pequeno, com a fonte do Lupi (5x8, so letras sem acento)
---   T.grande(...)  texto grande desenhado com retangulos, aceita acentos e escala
+--   T.grande(...)  texto grande, aceita acentos e escala. Desenhado com TILES (uma letra =
+--                  um tile, sombra preta ja desenhada) quando existe folha para aquele tamanho
+--                  e cor (ferramentas/gerar_fonte.py, dados_fonte.lua); senao, com retangulos.
+--                  O desenvolvedor do Lupi avisou: letra de retangulos pesa no console.
 --
 -- Acentos: o console guarda o texto em Latin-9 (1 byte por letra) e nao tem a biblioteca
 -- utf8 completa; o simulador e os editores usam UTF-8 (2 bytes por letra acentuada).
 -- Este arquivo entende os dois jeitos sozinho, sem usar utf8.* (que quebra no console),
 -- e o proprio codigo deste arquivo so tem caracteres ASCII.
+local Cores = require "cores"
+local Desenho = require "desenho"
+
 local T = {}
 
 local byte, char = string.byte, string.char
@@ -120,9 +126,88 @@ function T.largura(s, e)
   return math.max(0, letras(s) * 6 * e - e)
 end
 
+-- Folhas de tiles da fonte: FOLHA[escala][cor] (todas as letras) e NUMEROS[escala][cor]
+-- (so numeros e "/", folhas pequenas para o painel da corrida) = { imagem, tiles }.
+local FOLHA, NUMEROS = {}, {}
+for _, f in ipairs(Fonte.folhas) do
+  local destino = f.conjunto == "numeros" and NUMEROS or FOLHA
+  destino[f.escala] = destino[f.escala] or {}
+  destino[f.escala][f.cor] = { Sprites.img.fonte[f.imagem], Fonte.conjuntos[f.conjunto] }
+end
+
+-- Fila: na tela dividida o painel de cada visao usa as mesmas folhas. Com a fila ligada,
+-- o texto em tiles e guardado e desenhado no fim, agrupado por folha: cada folha e
+-- carregada uma vez por quadro (o console aceita 32 cargas de imagem por quadro).
+local fila, fila_n, fila_dx, fila_dy = {}, 0, 0, 0
+local ligada = false
+
+-- liga a fila; dx, dy = canto da visao (o mesmo deslocamento do ui.camera dela)
+function T.fila(dx, dy)
+  ligada, fila_dx, fila_dy = true, dx, dy
+end
+
+local function com_tiles(folha, s, x, y, e)
+  if ligada then
+    fila_n = fila_n + 1
+    local item = fila[fila_n]
+    if not item then
+      item = {}
+      fila[fila_n] = item
+    end
+    item[1], item[2], item[3], item[4], item[5] = folha, s, x + fila_dx, y + fila_dy, e
+    return
+  end
+  local img, ids = folha[1], folha[2]
+  local tile = ui.tile
+  Desenho.lote(img)
+  local i, n, cx, passo = 1, #s, x, 6 * e
+  while i <= n do
+    local cp
+    cp, i = codigo(s, i)
+    cp = maiuscula(cp)
+    local id = ids[cp]
+    if id then
+      tile(img, id, cx, y)
+    else
+      local def = COMPOSTA[cp]
+      if def then   -- letra acentuada: a letra e o acento (acima; a cedilha, abaixo)
+        tile(img, ids[byte(def[1])], cx, y)
+        tile(img, ids[def[2]], cx, def[2] == "cedilha" and y + 7 * e or y - 2 * e)
+      end
+    end
+    cx = cx + passo
+  end
+end
+
+-- desenha a fila (sem camera nem recorte), uma folha de cada vez, e desliga a fila
+function T.fila_desenhar()
+  ligada = false
+  ui.camera()
+  ui.clip()
+  for i = 1, fila_n do
+    local folha = fila[i][1]
+    if folha then
+      for k = i, fila_n do
+        local item = fila[k]
+        if item[1] == folha then
+          com_tiles(folha, item[2], item[3], item[4], item[5])
+          item[1] = false
+        end
+      end
+    end
+  end
+  fila_n = 0
+end
+
 -- Texto grande. e = escala (tamanho do "pixel" da letra). sombra = cor da sombra (opcional).
+-- Com tiles a sombra e sempre preta (ja esta desenhada na folha).
 function T.grande(s, x, y, e, cor, sombra)
   x, y = math.floor(x), math.floor(y)
+  if sombra == nil or sombra == Cores.preto then
+    local folha = NUMEROS[e] and NUMEROS[e][cor]
+    if not (folha and not s:find("[^%d/ ]")) then folha = FOLHA[e] and FOLHA[e][cor] end
+    if folha then return com_tiles(folha, s, x, y, e) end
+  end
   local cx = x
   local d = math.max(1, e // 3)
   local i, n = 1, #s
