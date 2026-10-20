@@ -81,7 +81,7 @@ local function coluna(self, j, x0, larg)
   T.p_centro("JOGADOR " .. j, cx, 46, Cores.jogador[j])
   -- o carro na cor do jogador, com a base sempre na mesma linha (o Uno e mais alto: escada)
   local tam = Arte.carros.tamanho[modelo.modelo].reto[1]
-  R.spr(Sprites.img.carros[modelo.modelo][Arte.carros.cores_jogador[j]].reto1, cx - tam[1] // 2, 142 - tam[2])
+  R.spr(Sprites.img.carros[modelo.modelo][Arte.carros.cores_jogador[j]].r1, cx - tam[1] // 2, 142 - tam[2])
   if not pronto then
     T.grande("<", x0 + 11, 96, 2, Cores.branco)
     T.grande(">", x0 + larg - 23, 96, 2, Cores.branco)

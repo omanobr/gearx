@@ -65,9 +65,9 @@ function R.preparar()
     for cor, pasta in pairs(Sprites.img.carros[modelo]) do
       local t = { reto = {}, esq = {}, dir = {} }
       for k = 1, Arte.carros.niveis do
-        t.reto[k] = pasta["reto" .. k]
-        t.esq[k] = pasta["esq" .. k]
-        t.dir[k] = pasta["dir" .. k]
+        t.reto[k] = pasta["r" .. k]   -- nomes curtos: o console descarta caminhos com 32+ letras
+        t.esq[k] = pasta["e" .. k]
+        t.dir[k] = pasta["d" .. k]
       end
       SPR[modelo][cor] = t
     end
