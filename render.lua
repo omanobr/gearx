@@ -530,6 +530,10 @@ function R.visao(corrida, carro, v, quadro)
   ui.clip(v.x, v.y, W, H)
   ui.camera(-v.x, -v.y)
   dados_da_pista(pista)
+  -- coqueiros pequenos em imagem so em 1 jogador: em 2 a visao e achatada (as imagens foram
+  -- feitas na proporcao de 1 jogador) e em 3 cada coqueiro de meia distancia, vezes 3 visoes,
+  -- passava de 32 cargas de imagem por quadro (e la sao poucos coqueiros)
+  Objetos.coqueiro_imagem = W > 300 and fy > hw * 0.5
   local f = Arte.fundos[pista.fundo]
   local p = panoramica(f, hy)
   local fim_fundo = max(0, topo_fundo(p, hy)) + p.altura

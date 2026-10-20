@@ -31,7 +31,7 @@ C.DIAGNOSTICO = true
 -- da v0.91): confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
 -- (Os ultimos segmentos ficam a 1 ou 2 pixels do horizonte: 100 em vez de 150 quase nao muda a tela.)
 C.DISTANCIA = { 100, 80, 40 }
-C.OBJETOS_DIST = { 70, 50, 30 }
+C.OBJETOS_DIST = { 50, 50, 30 }   -- v0.97c: 1 jogador de 70 para 50
 
 -- Fisica do carro (por segundo)
 C.VEL_MAX = C.SEG * 60           -- velocidade maxima: 60 segmentos por segundo

@@ -7,6 +7,7 @@
 local C = require "config"
 local Cores = require "cores"
 local T = require "texto"
+local Desenho = require "desenho"
 
 local O = {}
 
@@ -71,7 +72,27 @@ local FOLHAS = {
 }
 local TRONCO = Cores.tronco
 
--- Coqueiro em 3 niveis de detalhe (LOD), pela altura na tela:
+-- Coqueiros pequenos ja desenhados (ferramentas/gerar_efeitos.py), pela altura do tronco
+-- em pixels: { imagem, tile da folha (ou false), dx, dy }. IMAGENS_COQUEIRO[1] inclina para a
+-- direita, [-1] para a esquerda (espelhados). Longe vem da folha de tiles "longe".
+local IMAGENS_COQUEIRO = { [1] = {}, [-1] = {} }
+do
+  local pasta = Sprites.img.coqueiro
+  for h, t in pairs(Efeitos.coqueiro_longe) do
+    IMAGENS_COQUEIRO[1][h] = { pasta.longe, t[1], t[2], t[3] }
+    IMAGENS_COQUEIRO[-1][h] = { pasta.longe, t[1] + 1024, t[4], t[3] }
+  end
+  for h, t in pairs(Efeitos.coqueiro_meio) do
+    IMAGENS_COQUEIRO[1][h] = { pasta["d" .. h], false, t[1], t[3] }
+    IMAGENS_COQUEIRO[-1][h] = { pasta["e" .. h], false, t[2], t[3] }
+  end
+end
+-- so em 1 jogador: render.lua acerta a cada visao
+O.coqueiro_imagem = true
+
+-- Coqueiro: abaixo de MEDIO_PX de altura, uma imagem pronta (1 comando, poucas contas: a
+-- folha "longe" e carregada uma vez para todos os coqueiros longe em seguida). Perto, ou em
+-- 2 jogadores, triangulos em 3 niveis de detalhe (LOD):
 --   longe (menos de SIMPLES_PX): tronco de 1 linha e as 2 folhas de baixo (3 comandos)
 --   meia distancia (menos de MEDIO_PX): tronco de 1 triangulo e 3 folhas (4 comandos)
 --   perto: tronco de 2 triangulos e as 5 folhas (7 comandos)
@@ -79,6 +100,16 @@ local TRONCO = Cores.tronco
 local function palmeira(o, sx, sy, kx, ky)
   local h = 1400 * ky
   if h < MINIMO_PX then return end
+  if h < MEDIO_PX and O.coqueiro_imagem then
+    local im = o.imagens[h // 1]
+    if im[2] then
+      Desenho.lote(im[1])
+      ui.tile(im[1], im[2], (sx + im[3]) // 1, (sy + im[4]) // 1)
+    else
+      Desenho.spr(im[1], (sx + im[3]) // 1, (sy + im[4]) // 1)
+    end
+    return
+  end
   local trisfill = ui.trisfill
   local tx, ty = sx + o.lado * 140 * kx, sy - h
   local txi, tyi, syi = tx // 1, ty // 1, sy // 1
@@ -172,6 +203,7 @@ function O.preparar(o)
   o.alt, o.alc = ALTURA[o.tipo] or 0, ALCANCE[o.tipo] or 0
   o.lado = o.x > 0 and 1 or -1
   o.enfeite = O.enfeite[o.tipo] or false
+  if o.tipo == "palmeira" then o.imagens = IMAGENS_COQUEIRO[o.lado] end
 end
 
 -- (sx, sy) = base do objeto na tela; W x H = tamanho da visao
