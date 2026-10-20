@@ -200,6 +200,8 @@ end
 local SEG, CAM_PROF, CAM_ALTURA, ESTRADA, ZEBRA = C.SEG, C.CAM_PROF, C.CAM_ALTURA, C.ESTRADA, C.ZEBRA
 local ZMIN = CAM_PROF * CAM_ALTURA   -- distancia da linha do pe da tela (estrada plana)
 local FAIXAS_ATE = 45                -- segmentos com faixas de grama (mais longe: < 1 pixel cada)
+local PASSO_FUNDO = 6                -- mais longe, pedacos de cor fixa a cada 6 segmentos (a areia
+                                     -- acompanha a borda da estrada nas curvas)
 -- no console o rectfill inclui a ultima linha (no simulador nao): ui.log so existe no simulador
 local INCLUI = ui.log == nil
 
@@ -349,9 +351,11 @@ local function estrada_linhas(pista, cores, dist, W, H, hy, base, cam_off, cam_x
     if n >= dist then break end
     yb_ant, eb_ant = yb, eb
     -- proxima borda: onde a faixa troca de cor (ou o fim da estrada). Depois de FAIXAS_ATE
-    -- segmentos cada faixa teria menos de 1 pixel de altura: o resto vira uma faixa so.
+    -- segmentos cada faixa teria menos de 1 pixel de altura: o resto fica com cor fixa, em
+    -- pedacos de PASSO_FUNDO segmentos (um pedaco so, numa curva, deixava a areia invadir o
+    -- outro lado da estrada no fim da curva).
     if n >= FAIXAS_ATE then
-      n, fundo = dist, true
+      n, fundo = min(dist, n + PASSO_FUNDO), true
     else
       local v = VAR_[n]
       repeat n = n + 1 until n >= dist or VAR_[n] ~= v
