@@ -33,7 +33,7 @@ local TELAS = {
 }
 
 Jogo = {
-  opcoes = { jogadores = 1, pista = 2, voltas = 3, musica = true },   -- pista 2 = Orla da Cidade
+  opcoes = { jogadores = 1, pista = 2, voltas = 3, musica = false },   -- pista 2 = Orla da Cidade
   tela = nil,
 }
 
@@ -50,7 +50,7 @@ R.preparar()
 
 if DEV.cena == "corrida" then
   Jogo.opcoes = { jogadores = DEV.jogadores or 1, pista = DEV.pista or 1, voltas = DEV.voltas or 3, horario = DEV.horario,
-                  musica = true }
+                  musica = false }
   Jogo.ir("corrida", {
     jogadores = Jogo.opcoes.jogadores, pista = Jogo.opcoes.pista, voltas = Jogo.opcoes.voltas, horario = DEV.horario,
     autopiloto = DEV.autopiloto,
@@ -66,7 +66,7 @@ local Medidor = DEV.desempenho and require "medidor"
 -- o teste de desempenho usa as medidas sempre)
 local Diag = require "diagnostico"
 Diag.ligado = C.DIAGNOSTICO
-Jogo.diagnostico_rodape = C.DIAGNOSTICO   -- FPS no rodape (menu Opcoes); o log continua
+Jogo.diagnostico_rodape = false   -- FPS no rodape: comeca desligado (menu Opcoes); o log continua
 
 -- DEV.lento (so no simulador): o jogo anda 1 de cada N quadros, como o console quando o
 -- quadro demora (frameskip); nos outros so redesenha a mesma cena (o simulador apaga a tela
