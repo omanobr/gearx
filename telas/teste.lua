@@ -18,13 +18,6 @@ local PAGINAS = 3
 local SEGURAR = 60   -- quadros segurando o direcional para trocar de pagina
 
 function Tela.nova()
-  -- no log: todas as constantes de botao que o console tem (pode haver um START que a
-  -- documentacao nao lista)
-  for k, v in pairs(_ENV) do
-    if type(k) == "string" and (k:find("^BTN") or k:find("START") or k:find("SELECT")) then
-      print("GEARX CONSTANTE " .. k .. " = " .. tostring(v))
-    end
-  end
   return setmetatable({ pagina = 1, dir = 0, esq = 0 }, Tela)
 end
 

@@ -46,78 +46,7 @@ function D.inicio()
   anterior, inicio = t, t
 end
 
--- O que a tabela de arquivos do console tem para o GearX (a tabela Sprites sai dela). Ela
--- guarda no maximo 1024 arquivos por jogo e nunca apaga os antigos (a v0.97b encheu). Se o
--- jogo for reinstalado do zero, os restos de versoes antigas somem: as pastas de cor direto
--- em img/carros (v0.9) e os r1/e1/d1 da v0.97b. Escreve uma linha no log (cabo USB).
-local function chaves(t)
-  local n = 0
-  if type(t) == "table" then for _ in pairs(t) do n = n + 1 end end
-  return n
-end
--- imagens na tabela: se cada imagem e uma tabela, conta as tabelas sem tabelas dentro; senao,
--- conta os valores que nao sao tabela
-local function imagens(t, em_tabela)
-  local n = 0
-  for _, v in pairs(t) do
-    if type(v) == "table" then
-      local folha = em_tabela
-      if folha then for _, w in pairs(v) do if type(w) == "table" then folha = false break end end end
-      n = n + (folha and 1 or imagens(v, em_tabela))
-    elseif not em_tabela then
-      n = n + 1
-    end
-  end
-  return n
-end
-function D.arquivos()
-  local carros = Sprites.img and Sprites.img.carros or {}
-  local fa = carros.fusca and carros.fusca.amarelo
-  local e = carros.ka and carros.ka.vermelho and carros.ka.vermelho.reto1
-  local campos = {}
-  if type(e) == "table" then for k in pairs(e) do campos[#campos + 1] = tostring(k) end end
-  -- quantas cores a paleta do console tem (o servidor so acumula cores; o limite e 256)
-  local maior, n = 0, 0
-  for k in pairs(Palette) do
-    if type(k) == "number" then
-      n = n + 1
-      if k > maior then maior = k end
-    end
-  end
-  print(string.format("GEARX PALETA cores=%d maior indice=%d #Palette=%d", n, maior, #Palette))
-  print(string.format("GEARX ARQUIVOS imagens=%d (limpo: 680) pastas em img/carros=%d (limpo: 5) "
-    .. "fusca/amarelo=%d (limpo: 21) resto v0.9=%s resto v0.97b=%s imagem=%s{%s}",
-    imagens(Sprites, type(e) == "table"), chaves(carros), chaves(fa), tostring(carros.amarelo ~= nil),
-    tostring(fa ~= nil and fa.r1 ~= nil), type(e), table.concat(campos, ",")))
-end
-
--- Tudo o que o console oferece ao jogo (v0.99c): procura alguma funcao nao documentada para
--- gravar dados (recordes). Escreve no log os nomes globais e o que tem dentro das tabelas do
--- sistema (as do proprio jogo e as tabelas grandes de dados ficam de fora).
-local DO_JOGO = { Jogo = true, DEV = true, Palette = true, Sprites = true, Arte = true, Efeitos = true, Fonte = true,
-                  Estrada = true, Musica = true, _G = true, package = true }
-local function nomes(t)
-  local l = {}
-  for k, v in pairs(t) do
-    l[#l + 1] = tostring(k) .. (type(v) == "function" and "()" or (type(v) == "table" and "{}" or "=" .. tostring(v)))
-  end
-  table.sort(l)
-  return table.concat(l, " ")
-end
-function D.sistema()
-  print("GEARX GLOBAIS " .. nomes(_G))
-  for k, v in pairs(_G) do
-    if type(v) == "table" and not DO_JOGO[k] and type(k) == "string" then
-      print("GEARX TABELA " .. k .. ": " .. nomes(v))
-    end
-  end
-end
-
 function D.fim()
-  if D.quadros == 120 then
-    pcall(D.arquivos)
-    pcall(D.sistema)
-  end
   if relogio then
     D.ultimo_lua = relogio() - inicio
     soma_lua = soma_lua + D.ultimo_lua
