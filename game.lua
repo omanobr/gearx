@@ -78,8 +78,11 @@ function update(frame)
   Diag.inicio()
   if Medidor then Medidor.inicio() end
 
-  local palset, paleta = ui.palset, Palette
-  for i = 1, #paleta do palset(i - 1, paleta[i]) end
+  -- paleta: a documentacao manda registrar todo quadro (o teste de desempenho testa sem)
+  if not Jogo.sem_paleta then
+    local palset, paleta = ui.palset, Palette
+    for i = 1, #paleta do palset(i - 1, paleta[i]) end
+  end
   ui.camera()
   ui.clip()
   R.novo_quadro()

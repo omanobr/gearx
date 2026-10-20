@@ -13,12 +13,13 @@ C.CAM_PROF = 1 / math.tan(math.rad(50))   -- campo de visao de 100 graus
 C.JOGADOR_Z = C.CAM_ALTURA * C.CAM_PROF   -- distancia entre a camera e o carro
 C.HORIZONTE = 0.45               -- altura do horizonte (fracao da altura da tela)
 
--- Como desenhar as linhas da estrada: "tiles" (fatias prontas, como no Super Nintendo;
--- 2 comandos por linha da tela) ou "retangulos" (3 a 4 comandos por linha, v0.8 e v0.9).
--- O teste de desempenho (menu) compara os dois no console. Na tela dividida a estrada e
--- desenhada 2 ou 3 vezes e as folhas de tiles passariam do limite de 32 imagens por quadro.
-C.ESTRADA_DESENHO = "tiles"
-C.ESTRADA_DIVIDIDA = "retangulos"
+-- Como desenhar a estrada (render.lua): "linhas" = por linha da tela, com tabelas prontas,
+-- como o Out Run e o Top Gear (v0.94; muito menos contas), com fatias em tiles; "linhas2" =
+-- igual, com retangulos em faixas de 2 linhas (telas divididas: as folhas de tiles passariam
+-- do limite de 32 imagens por quadro). Os jeitos antigos (cada segmento projetado em 3D):
+-- "tiles" (v0.91), "retangulos" (v0.8). O teste de desempenho (menu) compara.
+C.ESTRADA_DESENHO = "linhas"
+C.ESTRADA_DIVIDIDA = "linhas2"
 
 -- Mostra FPS e tempo de cada quadro no canto da tela e manda para o log do console
 -- (cabo USB). Temporario, enquanto deixamos o jogo leve no aparelho.

@@ -110,9 +110,10 @@ local TESTES = {
     fundo()
     for k = 0, 9 do T.grande("1234567890", 20, 30 + k * 20, 2, Cores.branco) end
   end },
-  { "CORRIDA, ESTRADA DE TILES", corrida, { estrada = "tiles" } },
-  { "CORRIDA, ESTRADA DE RETANGULOS", corrida, { estrada = "retangulos" } },
-  { "CORRIDA, RETANGULOS 2 LINHAS", corrida, { estrada = "retangulos2" } },
+  { "CORRIDA, ESTRADA POR LINHAS", corrida, { estrada = "linhas" } },
+  { "CORRIDA, ESTRADA ANTIGA (TILES)", corrida, { estrada = "tiles" } },
+  { "CORRIDA, ANTIGA (RETANGULOS)", corrida, { estrada = "retangulos" } },
+  { "CORRIDA SEM REENVIAR A PALETA", corrida, { sem_paleta = true } },
   { "CORRIDA SEM OBJETOS", corrida, { sem = "objetos" } },
   { "CORRIDA SEM ESTRADA", corrida, { sem = "estrada" } },
   { "CORRIDA PARADA (SO O DESENHO)", corrida_parada },
@@ -128,6 +129,7 @@ local TESTES = {
 
 local function restaurar()
   R.sem = {}
+  Jogo.sem_paleta = nil
   R.estrada, R.estrada_dividida = C.ESTRADA_DESENHO, C.ESTRADA_DIVIDIDA
 end
 
@@ -147,6 +149,7 @@ function Tela:comecar()
   local op = teste and teste[3]
   if not op then return end
   if op.estrada then R.estrada = op.estrada end
+  if op.sem_paleta then Jogo.sem_paleta = true end
   if op.sem then R.sem[op.sem] = true end
   if op.jogadores then
     self.cv = TelaCorrida.nova({ jogadores = op.jogadores, pista = Jogo.opcoes.pista, voltas = 99,
