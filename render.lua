@@ -217,7 +217,8 @@ end
 -- ---------------------------------------------------------------------------
 local SEG, CAM_PROF, CAM_ALTURA, ESTRADA, ZEBRA = C.SEG, C.CAM_PROF, C.CAM_ALTURA, C.ESTRADA, C.ZEBRA
 local ZMIN = CAM_PROF * CAM_ALTURA   -- distancia da linha do pe da tela (estrada plana)
-local FAIXAS_ATE = 45                -- segmentos com faixas de grama (mais longe: < 1 pixel cada)
+local FAIXAS_ATE = 30                -- segmentos com faixas de grama/areia (mais longe: 1-2 pixels
+                                     -- cada; v0.97f: era 45)
 local PASSO_FUNDO = 6                -- mais longe, pedacos de cor fixa a cada 6 segmentos (a areia
                                      -- acompanha a borda da estrada nas curvas)
 -- no console o rectfill inclui a ultima linha (no simulador nao): ui.log so existe no simulador

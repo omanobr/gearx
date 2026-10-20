@@ -32,6 +32,8 @@ D.quadros = 0                           -- quantos update() desde que o jogo abr
 local inicio, anterior
 local soma_lua, soma_quadro, n = 0, 0, 0
 local texto = "MEDINDO..."
+-- rodape: o texto muda uma vez por segundo; a posicao e calculada so entao
+local rodape_x, rodape_w = (480 - (#texto * 6 + 3)) // 2, #texto * 6 + 3
 
 function D.inicio()
   D.quadros = D.quadros + 1
@@ -81,7 +83,7 @@ function D.arquivos()
 end
 
 function D.fim()
-  if D.quadros == 120 or D.quadros == 1200 then pcall(D.arquivos) end
+  if D.quadros == 120 then pcall(D.arquivos) end
   if relogio then
     D.ultimo_lua = relogio() - inicio
     soma_lua = soma_lua + D.ultimo_lua
@@ -97,6 +99,8 @@ function D.fim()
   if fps7 then partes[#partes + 1] = string.format("STAT7 %.0f", fps7) end
   if #partes == 0 then partes[1] = "SEM RELOGIO" end
   texto = table.concat(partes, "  ")
+  rodape_w = #texto * 6 + 3
+  rodape_x = (480 - rodape_w) // 2
   -- passo: quantos 1/60 s o jogo anda por quadro (tempo.lua); dframe: quanto o contador de
   -- quadros do console anda entre dois update() (1 = nao conta os quadros pulados)
   if D.ligado then print(string.format("GEARX %s tela=%s mem=%dKB quadro=%d passo=%.2f (%s) dframe=%s",
@@ -105,15 +109,13 @@ function D.fim()
   soma_lua, soma_quadro, n = 0, 0, 0
 end
 
--- rodape com o resultado (e o numero do quadro: num video da para contar os quadros por segundo)
+-- rodape com o resultado (v0.97f: sem o numero do quadro, que mudava todo quadro e obrigava a
+-- montar o texto de novo; o log tem "quadro=")
 function D.desenhar()
   ui.camera()
   ui.clip()
-  local s = texto .. "  Q" .. D.quadros
-  local w = #s * 6 + 3
-  local x = (480 - w) // 2
-  ui.rectfill(x, 262, x + w, 269, Cores.preto)
-  ui.print(s, x + 2, 262, Cores.branco)
+  ui.rectfill(rodape_x, 262, rodape_x + rodape_w, 269, Cores.preto)
+  ui.print(texto, rodape_x + 2, 262, Cores.branco)
 end
 
 return D

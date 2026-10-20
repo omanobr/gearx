@@ -58,6 +58,8 @@ local function pagina_controles()
       if c == 1 then T.p("J" .. (j + 1), 40, y + 6, Cores.jogador[j + 1]) end
       local apertado = ui.btn(_ENV[b[2]], j)
       ui.rectfill(x, y, x + 29, y + 21, apertado and Cores.verde or Cores.cinza_escuro)
+      -- e no log do console (cabo USB): "GEARX BOTAO BTN_X J1" a cada aperto
+      if ui.btnp(_ENV[b[2]], j) then print("GEARX BOTAO " .. b[2] .. " J" .. (j + 1)) end
     end
   end
   T.p("Entre parenteses: o botao que o jogo acha que e (controle Super Nintendo).", 8, 176, Cores.cinza)

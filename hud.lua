@@ -8,6 +8,22 @@ local Hud = {}
 
 local floor = math.floor
 
+-- Textos que se repetem todo quadro, montados uma vez so (montar texto novo a cada quadro
+-- pesava no console): NUM[3] = "3", VEL[87] = " 87", VOLTAS[2 * 1000 + 3] = "2/3"...
+local function guardado(f)
+  return setmetatable({}, { __index = function(t, k)
+    local v = f(k)
+    t[k] = v
+    return v
+  end })
+end
+local NUM = guardado(tostring)
+local VEL = guardado(function(n) return string.format("%3d", n) end)
+local VOLTAS = guardado(function(k) return (k // 1000) .. "/" .. (k % 1000) end)
+local VOLTA_TXT = guardado(function(k) return "VOLTA " .. (k // 1000) .. "/" .. (k % 1000) end)
+local MARCHA = { "M1", "M2", "M3", "M4", "M5" }
+local TOTAL = "/" .. C.TOTAL_CARROS
+
 local function marcha(pct)
   if pct < 0.12 then return 1 elseif pct < 0.3 then return 2 elseif pct < 0.5 then return 3
   elseif pct < 0.72 then return 4 end
@@ -45,29 +61,31 @@ function Hud.desenhar(corrida, carro, v, varios)
   local pct = carro.vel / C.VEL_MAX
   local kmh = floor(pct * C.KMH + 0.5)
   local volta = math.max(1, math.min(corrida.voltas, carro.volta + 1))
+  local posicao = NUM[carro.posicao]
 
   if grande then
     T.p("POSIÇÃO", 8, 6, Cores.branco, Cores.preto)
-    T.grande(tostring(carro.posicao), 8, 17, 5, Cores.amarelo, Cores.preto)
-    T.grande("/" .. C.TOTAL_CARROS, 8 + T.largura(tostring(carro.posicao), 5) + 6, 35, 2, Cores.branco, Cores.preto)
+    T.grande(posicao, 8, 17, 5, Cores.amarelo, Cores.preto)
+    T.grande(TOTAL, 8 + T.largura(posicao, 5) + 6, 35, 2, Cores.branco, Cores.preto)
     T.p_direita("VOLTA", W - 8, 6, Cores.branco, Cores.preto)
-    T.grande(volta .. "/" .. corrida.voltas, W - 8 - T.largura(volta .. "/" .. corrida.voltas, 3), 17, 3, Cores.amarelo, Cores.preto)
+    local voltas = VOLTAS[volta * 1000 + corrida.voltas]
+    T.grande(voltas, W - 8 - T.largura(voltas, 3), 17, 3, Cores.amarelo, Cores.preto)
     T.p_centro(T.tempo(corrida.tempo), W / 2, 6, Cores.branco, Cores.preto)
     nitro(carro, 8, H - 14)
     dano(carro, 8, H - 26, 48)
-    local vel = string.format("%3d", kmh)
+    local vel = VEL[kmh]
     T.grande(vel, W - 44 - T.largura(vel, 3), H - 28, 3, Cores.branco, Cores.preto)
     T.p("KM/H", W - 36, H - 14, Cores.branco, Cores.preto)
-    T.p("M" .. marcha(pct), W - 36, H - 26, Cores.amarelo, Cores.preto)
+    T.p(MARCHA[marcha(pct)], W - 36, H - 26, Cores.amarelo, Cores.preto)
   else
     T.p(carro.nome, 5, 4, Cores.jogador[carro.jogador + 1], Cores.preto)
-    T.grande(tostring(carro.posicao), 5, 14, 3, Cores.amarelo, Cores.preto)
-    T.p("/" .. C.TOTAL_CARROS, 5 + T.largura(tostring(carro.posicao), 3) + 3, 22, Cores.branco, Cores.preto)
-    T.p_direita("VOLTA " .. volta .. "/" .. corrida.voltas, W - 5, 4, Cores.branco, Cores.preto)
+    T.grande(posicao, 5, 14, 3, Cores.amarelo, Cores.preto)
+    T.p(TOTAL, 5 + T.largura(posicao, 3) + 3, 22, Cores.branco, Cores.preto)
+    T.p_direita(VOLTA_TXT[volta * 1000 + corrida.voltas], W - 5, 4, Cores.branco, Cores.preto)
     T.p_direita(T.tempo(corrida.tempo), W - 5, 14, Cores.branco, Cores.preto)
     nitro(carro, 5, H - 12)
     dano(carro, 5, H - 23, 48)
-    local vel = string.format("%3d", kmh)
+    local vel = VEL[kmh]
     T.grande(vel, W - 34 - T.largura(vel, 2), H - 17, 2, Cores.branco, Cores.preto)
     T.p("KM/H", W - 29, H - 12, Cores.branco, Cores.preto)
   end

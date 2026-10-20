@@ -34,7 +34,10 @@ Jogo = {
   tela = nil,
 }
 
+local paleta_falta = 0   -- quadros ate reenviar a paleta (C.PALETA_A_CADA)
+
 function Jogo.ir(nome, ...)
+  paleta_falta = 0
   Jogo.nome_tela = nome
   Jogo.tela = TELAS[nome].nova(...)
   collectgarbage("collect")
@@ -78,10 +81,15 @@ function update(frame)
   Diag.inicio()
   if Medidor then Medidor.inicio() end
 
-  -- paleta: a documentacao manda registrar todo quadro (o teste de desempenho testa sem)
+  -- paleta: so ao trocar de tela e a cada C.PALETA_A_CADA quadros (config.lua); o teste de
+  -- desempenho testa sem nenhuma
   if not Jogo.sem_paleta then
-    local palset, paleta = ui.palset, Palette
-    for i = 1, #paleta do palset(i - 1, paleta[i]) end
+    if C.PALETA_TODO_QUADRO or paleta_falta <= 0 then
+      local palset, paleta = ui.palset, Palette
+      for i = 1, #paleta do palset(i - 1, paleta[i]) end
+      paleta_falta = C.PALETA_A_CADA
+    end
+    paleta_falta = paleta_falta - 1
   end
   ui.camera()
   ui.clip()

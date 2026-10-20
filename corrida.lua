@@ -390,14 +390,24 @@ function Corrida:atualizar()
   local carros = self.carros
   for k = 1, #carros do
     local carro = carros[k]
-    local a, f, e, d, n
     if carro.humano and not carro.auto then
-      local p = carro.jogador
-      a, f, e, d, n = Entrada.acelera(p), Entrada.freia(p), Entrada.esquerda(p), Entrada.direita(p), Entrada.nitro(p)
+      local j = carro.jogador
+      self:mover(carro, Entrada.acelera(j), Entrada.freia(j), Entrada.esquerda(j), Entrada.direita(j), Entrada.nitro(j))
+    elseif carro.humano then
+      self:mover(carro, self:ia(carro, k % 2 == self.pensa))
     else
-      a, f, e, d, n = self:ia(carro, k % 2 == self.pensa)
+      -- computador: longe dos jogadores (fora da tela), anda em quadros alternados com o dobro
+      -- do passo (metade das contas e ninguem ve); perto, todo quadro
+      local vez = k % 2 == self.pensa
+      if vez then carro.longe = self:longe(carro) end
+      if not carro.longe then
+        self:mover(carro, self:ia(carro, vez))
+      elseif vez then
+        self.passo = 2 * p
+        self:mover(carro, self:ia(carro, true))
+        self.passo = p
+      end
     end
-    self:mover(carro, a, f, e, d, n)
   end
   self:colisoes()
   self:classificar()
@@ -414,6 +424,21 @@ function Corrida:atualizar()
       self.fim_em = self.tempo
     end
   end
+end
+
+-- O carro esta longe de todos os jogadores (fora da tela: mais longe que a estrada desenhada
+-- a frente, ou bem atras)?
+local LONGE_FRENTE = (math.max(C.DISTANCIA[1], C.DISTANCIA[2], C.DISTANCIA[3]) + 10) * C.SEG
+local LONGE_ATRAS = 30 * C.SEG
+function Corrida:longe(carro)
+  local humanos, L = self.humanos, self.pista.comprimento
+  local meio = L / 2
+  for i = 1, #humanos do
+    local dz = carro.z - humanos[i].z
+    if dz < -meio then dz = dz + L elseif dz > meio then dz = dz - L end
+    if dz > -LONGE_ATRAS and dz < LONGE_FRENTE then return false end
+  end
+  return true
 end
 
 -- Corrida acabou e ja mostrou a chegada por alguns segundos?

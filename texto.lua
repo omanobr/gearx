@@ -122,8 +122,20 @@ local function desenhar_glifo(partes, x, y, e, cor)
   end
 end
 
+-- Contas que so dependem do texto ficam guardadas: o painel da corrida desenha os mesmos
+-- textos todo quadro (montar de novo pesava no console)
+local function guardado(f)
+  return setmetatable({}, { __index = function(t, s)
+    local v = f(s)
+    t[s] = v
+    return v
+  end })
+end
+local LETRAS = guardado(letras)
+local SO_NUMEROS = guardado(function(s) return not s:find("[^%d/ ]") end)
+
 function T.largura(s, e)
-  return math.max(0, letras(s) * 6 * e - e)
+  return math.max(0, LETRAS[s] * 6 * e - e)
 end
 
 -- Folhas de tiles da fonte: FOLHA[escala][cor] (todas as letras) e NUMEROS[escala][cor]
@@ -132,7 +144,8 @@ local FOLHA, NUMEROS = {}, {}
 for _, f in ipairs(Fonte.folhas) do
   local destino = f.conjunto == "numeros" and NUMEROS or FOLHA
   destino[f.escala] = destino[f.escala] or {}
-  destino[f.escala][f.cor] = { Sprites.img.fonte[f.imagem], Fonte.conjuntos[f.conjunto] }
+  -- { imagem, tiles de cada letra, textos ja convertidos em tiles (com_tiles) }
+  destino[f.escala][f.cor] = { Sprites.img.fonte[f.imagem], Fonte.conjuntos[f.conjunto], {} }
 end
 
 -- Fila: na tela dividida o painel de cada visao usa as mesmas folhas. Com a fila ligada,
@@ -157,25 +170,40 @@ local function com_tiles(folha, s, x, y, e)
     item[1], item[2], item[3], item[4], item[5] = folha, s, x + fila_dx, y + fila_dy, e
     return
   end
-  local img, ids = folha[1], folha[2]
-  local tile = ui.tile
-  Desenho.lote(img)
-  local i, n, cx, passo = 1, #s, x, 6 * e
-  while i <= n do
-    local cp
-    cp, i = codigo(s, i)
-    cp = maiuscula(cp)
-    local id = ids[cp]
-    if id then
-      tile(img, id, cx, y)
-    else
-      local def = COMPOSTA[cp]
-      if def then   -- letra acentuada: a letra e o acento (acima; a cedilha, abaixo)
-        tile(img, ids[byte(def[1])], cx, y)
-        tile(img, ids[def[2]], cx, def[2] == "cedilha" and y + 7 * e or y - 2 * e)
+  local img = folha[1]
+  local lista = folha[3][s]
+  if not lista then
+    -- primeira vez deste texto nesta folha: converte em { tile, dx, dy, tile, dx, dy, ... }
+    lista = {}
+    local ids = folha[2]
+    local function poe(id, dx, dy)
+      if id then
+        lista[#lista + 1], lista[#lista + 2], lista[#lista + 3] = id, dx, dy
       end
     end
-    cx = cx + passo
+    local i, n, cx, passo = 1, #s, 0, 6 * e
+    while i <= n do
+      local cp
+      cp, i = codigo(s, i)
+      cp = maiuscula(cp)
+      local id = ids[cp]
+      if id then
+        poe(id, cx, 0)
+      else
+        local def = COMPOSTA[cp]
+        if def then   -- letra acentuada: a letra e o acento (acima; a cedilha, abaixo)
+          poe(ids[byte(def[1])], cx, 0)
+          poe(ids[def[2]], cx, def[2] == "cedilha" and 7 * e or -2 * e)
+        end
+      end
+      cx = cx + passo
+    end
+    folha[3][s] = lista
+  end
+  local tile = ui.tile
+  Desenho.lote(img)
+  for j = 1, #lista, 3 do
+    tile(img, lista[j], x + lista[j + 1], y + lista[j + 2])
   end
 end
 
@@ -205,7 +233,7 @@ function T.grande(s, x, y, e, cor, sombra)
   x, y = math.floor(x), math.floor(y)
   if sombra == nil or sombra == Cores.preto then
     local folha = NUMEROS[e] and NUMEROS[e][cor]
-    if not (folha and not s:find("[^%d/ ]")) then folha = FOLHA[e] and FOLHA[e][cor] end
+    if not (folha and SO_NUMEROS[s]) then folha = FOLHA[e] and FOLHA[e][cor] end
     if folha then return com_tiles(folha, s, x, y, e) end
   end
   local cx = x

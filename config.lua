@@ -25,12 +25,19 @@ C.ESTRADA_DIVIDIDA = "linhas2"
 -- (cabo USB). Temporario, enquanto deixamos o jogo leve no aparelho.
 C.DIAGNOSTICO = true
 
+-- Paleta: a documentacao do Lupi manda registrar as cores (ui.palset) todo quadro, mas
+-- reenviar as ~230 cores custava 5% do processamento da corrida. Com false, o jogo reenvia
+-- so ao trocar de tela e a cada PALETA_A_CADA quadros (por garantia). Se no console as cores
+-- sairem erradas ou piscarem, volte para true.
+C.PALETA_TODO_QUADRO = false
+C.PALETA_A_CADA = 300
+
 -- Quantos segmentos desenhar para frente, conforme o numero de jogadores, e ate quantos
 -- segmentos aparecem os objetos da beira (palmeiras, postes...). Menos = jogo mais leve.
 -- No aparelho o Lua faz so umas 20 mil instrucoes por quadro a 60 FPS (teste de desempenho
 -- da v0.91): confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
 -- (Os ultimos segmentos ficam a 1 ou 2 pixels do horizonte: 100 em vez de 150 quase nao muda a tela.)
-C.DISTANCIA = { 100, 80, 40 }
+C.DISTANCIA = { 80, 80, 40 }       -- v0.97f: 1 jogador de 100 para 80
 C.OBJETOS_DIST = { 50, 50, 30 }   -- v0.97c: 1 jogador de 70 para 50
 
 -- Fisica do carro (por segundo)
