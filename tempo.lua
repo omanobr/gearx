@@ -24,6 +24,7 @@ end
 
 -- chamar uma vez no comeco de cada update(frame)
 function Tempo.atualizar(frame)
+  Tempo.frame = frame   -- (a abertura usa no sorteio do logo)
   local d
   if type(frame) == "number" and ultimo_frame then d = frame - ultimo_frame end
   ultimo_frame = frame

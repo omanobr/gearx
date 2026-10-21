@@ -9,6 +9,7 @@ require "dados_efeitos" -- gerado por ferramentas/gerar_efeitos.py
 require "dados_musica"  -- gerado por ferramentas/compor_musica.py
 require "dados_fonte"   -- gerado por ferramentas/gerar_fonte.py
 require "dados_estrada" -- gerado por ferramentas/gerar_estrada.py
+require "dados_abertura" -- gerado por ferramentas/gerar_abertura.py
 
 -- Opcoes de teste vindas do simulador (o arquivo nao existe no console).
 local ok, dev = pcall(require, "dev_config")
@@ -20,6 +21,7 @@ local Som = require "som"
 local Tempo = require "tempo"
 
 local TELAS = {
+  abertura = require "telas.abertura",
   titulo = require "telas.titulo",
   menu = require "telas.menu",
   escolha = require "telas.escolha",
@@ -39,8 +41,26 @@ Jogo = {
 
 local paleta_falta = 0   -- quadros ate reenviar a paleta (C.PALETA_A_CADA)
 
+-- Fade (abertura, titulo): Jogo.brilho de 0 (preto) a 1 (normal); nil = normal. A paleta
+-- escurecida tem 16 niveis, cada um montado na primeira vez que aparece.
+local ESCURA = {}
+local function paleta_escura(n)
+  local t = ESCURA[n]
+  if t then return t end
+  t = { Palette[1] }   -- a cor 0 e a transparente: fica como esta
+  for i = 2, #Palette do
+    local c = Palette[i]   -- BGR555: vermelho nos 5 bits de baixo
+    local r, g, b = (c & 31) * n // 16, ((c >> 5) & 31) * n // 16, ((c >> 10) & 31) * n // 16
+    local v = r | (g << 5) | (b << 10)
+    t[i] = v == 0 and 0x0421 or v   -- 0x0000 e transparente no console: o mais escuro e 1,1,1
+  end
+  ESCURA[n] = t
+  return t
+end
+
 function Jogo.ir(nome, ...)
   paleta_falta = 0
+  Jogo.brilho = nil   -- a tela nova pode comecar escura (ela mesma acerta)
   Jogo.nome_tela = nome
   Jogo.tela = TELAS[nome].nova(...)
   collectgarbage("collect")
@@ -56,7 +76,7 @@ if DEV.cena == "corrida" then
     autopiloto = DEV.autopiloto,
   })
 else
-  Jogo.ir("titulo")
+  Jogo.ir(DEV.sem_abertura and "titulo" or "abertura")
 end
 Som.musica()
 
@@ -91,6 +111,7 @@ function update(frame)
   if not Jogo.sem_paleta then
     if C.PALETA_TODO_QUADRO or paleta_falta <= 0 then
       local palset, paleta = ui.palset, Palette
+      if Jogo.brilho and Jogo.brilho < 1 then paleta = paleta_escura(math.floor(Jogo.brilho * 16)) end
       for i = 1, #paleta do palset(i - 1, paleta[i]) end
       paleta_falta = C.PALETA_A_CADA
     end

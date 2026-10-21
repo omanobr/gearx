@@ -10,13 +10,24 @@ local Tempo = require "tempo"
 local Tela = {}
 Tela.__index = Tela
 
-function Tela.nova()
+local CLAREAR = 30   -- quadros do fade depois da abertura
+
+-- clarear: vindo da abertura, a tela comeca preta e clareia (Jogo.brilho, em game.lua)
+function Tela.nova(clarear)
   Demo.iniciar(Jogo.opcoes.pista, Jogo.opcoes.horario)
-  return setmetatable({ t = 0 }, Tela)
+  if clarear then Jogo.brilho = 0 end
+  return setmetatable({ t = 0, clarear = clarear }, Tela)
 end
 
 function Tela:atualizar()
   self.t = self.t + Tempo.passo   -- o "APERTE" pisca no ritmo certo mesmo com o console lento
+  if self.clarear then
+    if self.t >= CLAREAR then
+      Jogo.brilho, self.clarear = nil, nil
+    else
+      Jogo.brilho = self.t / CLAREAR
+    end
+  end
   Demo.atualizar()
   if self.t > 20 and Entrada.confirmar() then Jogo.ir("menu") end
 end
