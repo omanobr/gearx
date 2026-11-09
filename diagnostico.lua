@@ -54,12 +54,15 @@ function D.fim()
   n = n + 1
   if n < 60 then return end
   local fps7 = stat(7)
+  -- uso do processador, de 0 a 100 (ui.stat(1), firmware 0.6.8): quanto sobra a 60 FPS
+  local cpu = stat(1)
   local partes = {}
   if relogio and soma_quadro > 0 then
     partes[#partes + 1] = string.format("FPS %.0f  LUA %.1fMS  QUADRO %.1fMS",
       n / soma_quadro, soma_lua / n * 1000, soma_quadro / n * 1000)
   end
   if fps7 then partes[#partes + 1] = string.format("STAT7 %.0f", fps7) end
+  if cpu then partes[#partes + 1] = string.format("CPU %.0f%%", cpu) end
   if #partes == 0 then partes[1] = "SEM RELOGIO" end
   texto = table.concat(partes, "  ")
   rodape_w = #texto * 6 + 3

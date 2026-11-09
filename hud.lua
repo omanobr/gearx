@@ -21,6 +21,8 @@ local NUM = guardado(tostring)
 local VEL = guardado(function(n) return string.format("%3d", n) end)
 local VOLTAS = guardado(function(k) return (k // 1000) .. "/" .. (k % 1000) end)
 local VOLTA_TXT = guardado(function(k) return "VOLTA " .. (k // 1000) .. "/" .. (k % 1000) end)
+local ORDINAL = guardado(function(p) return p .. "º" end)
+local VOLTA_N = guardado(function(n) return "VOLTA " .. n end)
 local MARCHA = { "M1", "M2", "M3", "M4", "M5" }
 local TOTAL = "/" .. C.TOTAL_CARROS
 
@@ -117,10 +119,10 @@ function Hud.classificacao(corrida, v)
   for p, carro in ipairs(corrida.ranking) do
     local ly = y + 24 + (p - 1) * 13
     local cor = carro.humano and Cores.jogador[carro.jogador + 1] or Cores.branco
-    T.p(p .. "º", x, ly, Cores.cinza)
+    T.p(ORDINAL[p], x, ly, Cores.cinza)
     T.p(carro.nome, x + 22, ly, cor)
     local info
-    if carro.terminou then info = "CHEGOU" else info = "VOLTA " .. math.max(1, math.min(corrida.voltas, carro.volta + 1)) end
+    if carro.terminou then info = "CHEGOU" else info = VOLTA_N[math.max(1, math.min(corrida.voltas, carro.volta + 1))] end
     T.p_direita(info, v.x + v.w - 10, ly, carro.humano and cor or Cores.cinza)
   end
 end

@@ -266,34 +266,54 @@ for letra, codigos in pairs({
   for _, cp in ipairs(codigos) do SEM_ACENTO[cp] = letra end
 end
 
-local ja_convertidos = {}   -- os textos com acento se repetem a cada quadro: guarda o resultado
-function T.sem_acento(s)
-  if not s:find("[\x80-\xFF]") then return s end
-  local pronto = ja_convertidos[s]
-  if pronto then return pronto end
-  local partes, i, n = {}, 1, #s
-  while i <= n do
-    local cp
-    cp, i = codigo(s, i)
-    partes[#partes + 1] = cp < 0x80 and char(cp) or (SEM_ACENTO[cp] or "?")
+-- Os textos pequenos se repetem a cada quadro (o painel da corrida, ~40 por quadro em 3
+-- jogadores): SEM[s] (sem acento) e LARGURA_P[s] (em pixels) sao calculados uma vez por texto.
+-- v1.00e: antes cada T.p procurava acentos no texto e chamava math.floor 4 vezes (o T.p era a
+-- funcao de texto mais pesada da corrida em 3 jogadores). O cronometro muda todo quadro: as
+-- tabelas recomecam a cada GUARDA_MAX textos, para a memoria nao crescer sem parar.
+local GUARDA_MAX = 300
+local SEM, LARGURA_P, guardados = {}, {}, 0
+
+local function sem(s)
+  if guardados >= GUARDA_MAX then SEM, LARGURA_P, guardados = {}, {}, 0 end
+  local t = s
+  if s:find("[\x80-\xFF]") then
+    local partes, i, n = {}, 1, #s
+    while i <= n do
+      local cp
+      cp, i = codigo(s, i)
+      partes[#partes + 1] = cp < 0x80 and char(cp) or (SEM_ACENTO[cp] or "?")
+    end
+    t = table.concat(partes)
   end
-  pronto = table.concat(partes)
-  ja_convertidos[s] = pronto
-  return pronto
+  SEM[s], LARGURA_P[s], guardados = t, #t * 6 - 1, guardados + 1
+  return t
+end
+
+function T.sem_acento(s)
+  return SEM[s] or sem(s)
 end
 
 function T.p(s, x, y, cor, sombra)
-  s = T.sem_acento(s)
-  if sombra then ui.print(s, math.floor(x) + 1, math.floor(y) + 1, sombra) end
-  ui.print(s, math.floor(x), math.floor(y), cor)
+  s = SEM[s] or sem(s)
+  x, y = x // 1, y // 1
+  if sombra then ui.print(s, x + 1, y + 1, sombra) end
+  ui.print(s, x, y, cor)
+end
+
+local function largura_p(s)
+  local w = LARGURA_P[s]
+  if w then return w end
+  sem(s)
+  return LARGURA_P[s]
 end
 
 function T.p_centro(s, cx, y, cor, sombra)
-  T.p(s, cx - (#T.sem_acento(s) * 6 - 1) / 2, y, cor, sombra)
+  T.p(s, cx - largura_p(s) / 2, y, cor, sombra)
 end
 
 function T.p_direita(s, xd, y, cor, sombra)
-  T.p(s, xd - (#T.sem_acento(s) * 6 - 1), y, cor, sombra)
+  T.p(s, xd - largura_p(s), y, cor, sombra)
 end
 
 function T.tempo(quadros)

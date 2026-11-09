@@ -1,7 +1,7 @@
 -- Ajustes gerais do jogo. Mude um numero, salve, e veja o efeito no simulador.
 local C = {}
 
-C.VERSAO = "v1.00d"               -- aparece no titulo e no menu
+C.VERSAO = "v1.00e"               -- aparece no titulo e no menu
 C.LARGURA, C.ALTURA = 480, 270
 
 -- Estrada (medidas no "mundo 3D", nao em pixels)
@@ -35,16 +35,18 @@ C.PALETA_A_CADA = 300
 
 -- Quantos segmentos desenhar para frente, conforme o numero de jogadores, e ate quantos
 -- segmentos aparecem os objetos da beira (palmeiras, postes...). Menos = jogo mais leve.
--- No aparelho o Lua faz so umas 20 mil instrucoes por quadro a 60 FPS (teste de desempenho
--- da v0.91): confira com o medidor do simulador (Modo de teste > desempenho) ao mudar.
+-- No firmware 0.6.6 o Lua fazia so umas 20 mil instrucoes por quadro a 60 FPS; no 0.6.8 (nov/2026)
+-- ficou ~2x mais rapido (~27 mil na corrida): confira com testar_console.py ao mudar.
 -- (Os ultimos segmentos ficam a 1 ou 2 pixels do horizonte: 100 em vez de 150 quase nao muda a tela.)
-C.DISTANCIA = { 70, 80, 40 }       -- 1 jogador: 100 ate a v0.97e, 80 na v0.97f, 70 na v0.97j
-C.OBJETOS_DIST = { 50, 50, 30 }   -- v0.97c: 1 jogador de 70 para 50
+-- 1 jogador: 100 ate a v0.97e, 80 na v0.97f, 70 na v0.97j e 100 de novo na v1.00e (firmware 0.6.8)
+C.DISTANCIA = { 100, 80, 40 }
+C.OBJETOS_DIST = { 70, 50, 30 }   -- 1 jogador: 70 -> 50 na v0.97c, 70 de novo na v1.00e
 -- Linhas duplas (v0.97h; o Felipe comparou no simulador e nao notou diferenca): na parte de
 -- baixo da estrada (a partir desta fracao da altura, contando do horizonte) cada linha
 -- calculada e desenhada duas vezes: metade das contas ali (~5% da corrida em 1 jogador); a
--- borda da pista fica em degraus de 2 pixels perto do carro. false desliga.
-C.LINHAS_DUPLAS = true
+-- borda da pista fica em degraus de 2 pixels perto do carro. false desliga (v1.00e: com o
+-- firmware 0.6.8 sobra processamento; so vale em 1 jogador, as telas divididas usam retangulos).
+C.LINHAS_DUPLAS = false
 C.LINHAS_DUPLAS_DESDE = 0.25   -- v0.97j: era 0.4
 
 -- Fisica do carro (por segundo)
