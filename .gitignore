@@ -38,3 +38,8 @@ luac.out
 *.i*86
 *.x86_64
 *.hex
+
+# Previas da musica para ouvir no computador (ferramentas/compor_musica.py --previa):
+# ficam em build/previa_musica e nunca vao para o GitHub nem para o console
+previa_musica/
+*.wav
